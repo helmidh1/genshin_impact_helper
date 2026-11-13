@@ -1,36 +1,28 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Teyvat Strategist — Genshin Impact Combat & Status Helper
+
+A local-first Next.js (App Router, TypeScript, Tailwind CSS) web app for tracking your Genshin Impact showcase builds via **Enka.Network** and generating team rotations, ER diagnostics, and matchup coaching via **Gemini 3.8 Flash** (`@google/genai`).
+
+## Features
+
+- **Overview Dashboard**: Traveler profile summary (AR, World Level, Spiral Abyss, Imaginarium Theater, Achievements), sortable 8-card Public Character Showcase grid, and local-first **Directives & Resin** tracker (`localStorage`).
+- **Character Showcase & Build Inspector**: Detailed character stats, talent levels, weapon stats, 5-slot artifact substat roll breakdowns with Crit Value (CV) grading, and automated bottleneck callouts.
+- **AI Combat & Rotation Coach**: 4-slot team builder, Encounter / Boss preset selector, rotation timeline visualizer, Energy Recharge & particle funneling diagnostics, and multi-turn Q&A powered by Gemini 3.8 Flash (with deterministic local heuristics fallback when `GEMINI_API_KEY` is unset).
 
 ## Getting Started
 
-First, run the development server:
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+2. Optional — enable live AI coaching by copying `.env.example` to `.env.local` and adding your Gemini API key:
+   ```bash
+   GEMINI_API_KEY=your_key_here
+   ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+3. Start the development server:
+   ```bash
+   npm run dev
+   ```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Open `http://localhost:3000` in your browser, enter your 9- or 10-digit Genshin Impact UID in the top bar, and click **Sync Data**.
