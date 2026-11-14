@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   BrainCircuit,
   Heart,
   Search,
@@ -25,6 +27,7 @@ type ElementFilter = "All" | ShowcaseCharacter["element"];
 type WeaponTypeFilter = "All" | "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst";
 type RarityFilter = "All" | 5 | 4;
 type SortOption = "cv" | "level" | "constellation" | "name";
+type SortDirection = "desc" | "asc";
 
 const ELEMENT_FILTERS: ElementFilter[] = [
   "All",
@@ -47,10 +50,10 @@ const WEAPON_TYPE_FILTERS: { label: string; value: WeaponTypeFilter }[] = [
 ];
 
 const SORT_OPTIONS: { label: string; value: SortOption }[] = [
-  { label: "Highest CV", value: "cv" },
-  { label: "Level (High → Low)", value: "level" },
-  { label: "Constellation (C6 → C0)", value: "constellation" },
-  { label: "Name (A → Z)", value: "name" },
+  { label: "Crit Value (CV)", value: "cv" },
+  { label: "Level", value: "level" },
+  { label: "Constellation", value: "constellation" },
+  { label: "Name", value: "name" },
 ];
 
 interface ShowcaseTabProps {
@@ -71,6 +74,7 @@ export function ShowcaseTab({
   const [weaponTypeFilter, setWeaponTypeFilter] = useState<WeaponTypeFilter>("All");
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("All");
   const [sortBy, setSortBy] = useState<SortOption>("cv");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [viewMode, setViewMode] = useState<"artifacts" | "equipment">("artifacts");
 
   // Keep responsive local selection state synchronized with parent selectedAvatarId prop
@@ -137,7 +141,8 @@ export function ShowcaseTab({
     elementFilter !== "All" ||
     weaponTypeFilter !== "All" ||
     rarityFilter !== "All" ||
-    sortBy !== "cv";
+    sortBy !== "cv" ||
+    sortDirection !== "desc";
 
   const handleResetFilters = () => {
     setSearchQuery("");
@@ -145,6 +150,7 @@ export function ShowcaseTab({
     setWeaponTypeFilter("All");
     setRarityFilter("All");
     setSortBy("cv");
+    setSortDirection("desc");
   };
 
   const filteredCharacters = useMemo(() => {
@@ -176,19 +182,29 @@ export function ShowcaseTab({
     });
 
     return [...filtered].sort((a, b) => {
+      const isAsc = sortDirection === "asc";
+      const modifier = isAsc ? -1 : 1;
+
       if (sortBy === "cv") {
-        return b.totalCv !== a.totalCv ? b.totalCv - a.totalCv : b.level - a.level;
+        const diff =
+          b.totalCv !== a.totalCv ? b.totalCv - a.totalCv : b.level - a.level;
+        return diff * modifier;
       }
       if (sortBy === "level") {
-        return b.level !== a.level ? b.level - a.level : b.totalCv - a.totalCv;
+        const diff =
+          b.level !== a.level ? b.level - a.level : b.totalCv - a.totalCv;
+        return diff * modifier;
       }
       if (sortBy === "constellation") {
-        return b.constellation !== a.constellation
-          ? b.constellation - a.constellation
-          : b.totalCv - a.totalCv;
+        const diff =
+          b.constellation !== a.constellation
+            ? b.constellation - a.constellation
+            : b.totalCv - a.totalCv;
+        return diff * modifier;
       }
       if (sortBy === "name") {
-        return a.name.localeCompare(b.name);
+        const diff = a.name.localeCompare(b.name);
+        return isAsc ? -diff : diff;
       }
       return 0;
     });
@@ -199,6 +215,7 @@ export function ShowcaseTab({
     weaponTypeFilter,
     rarityFilter,
     sortBy,
+    sortDirection,
   ]);
 
   if (!selected) {
@@ -317,13 +334,13 @@ export function ShowcaseTab({
               })}
             </div>
 
-            {/* Sort Selector */}
-            <div className="flex items-center">
+            {/* Sort Selector & Direction Toggle */}
+            <div className="flex items-center gap-1.5">
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
-                title="Sort characters"
+                title="Sort metric"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -331,6 +348,42 @@ export function ShowcaseTab({
                   </option>
                 ))}
               </select>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
+                }
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer ${
+                  sortDirection === "asc"
+                    ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-semibold"
+                    : "bg-[#0a0e18]/80 border-white/15 text-[#dfe2f1] hover:border-white/30"
+                }`}
+                title={
+                  sortBy === "name"
+                    ? sortDirection === "asc"
+                      ? "Order: Z to A (click for A to Z)"
+                      : "Order: A to Z (click for Z to A)"
+                    : sortDirection === "asc"
+                    ? "Order: Low to High (click for High to Low)"
+                    : "Order: High to Low (click for Low to High)"
+                }
+              >
+                {sortDirection === "asc" ? (
+                  <ArrowUp className="w-3.5 h-3.5 text-[#f2ca50]" />
+                ) : (
+                  <ArrowDown className="w-3.5 h-3.5 text-[#99907c]" />
+                )}
+                <span>
+                  {sortBy === "name"
+                    ? sortDirection === "asc"
+                      ? "Z → A"
+                      : "A → Z"
+                    : sortDirection === "asc"
+                    ? "Low → High"
+                    : "High → Low"}
+                </span>
+              </button>
             </div>
 
             {/* Reset Filters button */}
