@@ -284,18 +284,8 @@ export function ShowcaseTab({
           }`}
         >
           <div className="overflow-hidden">
-            <div className="flex items-center justify-between px-3.5 py-2">
-              <button
-                type="button"
-                onClick={() => setIsSelectorCollapsed(false)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#262a35] hover:bg-[#323746] border border-[#d4af37]/50 text-[#f2ca50] text-xs font-mono font-semibold transition-all cursor-pointer shadow-[0_0_10px_rgba(212,175,55,0.2)]"
-                title="Show character search and selection window"
-              >
-                <ChevronDown className="w-4 h-4 text-[#f2ca50]" />
-                <span>Show Character Selector</span>
-              </button>
-
-              {/* Active Character Chip */}
+            <div className="flex items-center justify-between px-3 py-2">
+              {/* Active Character Chip (Left) */}
               <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#0a0e18]/80 border border-white/10">
                 <CharacterAvatar
                   name={selected.name}
@@ -315,6 +305,17 @@ export function ShowcaseTab({
                   Lv.{selected.level} • {selected.totalCv.toFixed(0)} CV
                 </span>
               </div>
+
+              {/* Show Character Selector Button (Right) */}
+              <button
+                type="button"
+                onClick={() => setIsSelectorCollapsed(false)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#d4af37]/50 bg-[#262a35] hover:bg-[#323746] text-[#f2ca50] text-xs font-mono font-semibold transition-all cursor-pointer shadow-[0_0_10px_rgba(212,175,55,0.2)] shrink-0"
+                title="Show character search and selection window"
+              >
+                <ChevronDown className="w-3.5 h-3.5 text-[#f2ca50]" />
+                <span>Show Character Selector</span>
+              </button>
             </div>
           </div>
         </div>
