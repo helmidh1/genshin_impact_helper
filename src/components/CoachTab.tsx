@@ -4,13 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   Bolt,
+  BookmarkPlus,
   Bot,
   CheckCircle2,
+  ChevronDown,
   Cpu,
   Eye,
   EyeOff,
   ExternalLink,
   Flame,
+  FolderOpen,
   KeyRound,
   Lightbulb,
   Send,
@@ -19,8 +22,10 @@ import {
   Swords,
   Timer,
   Trash2,
+  X,
 } from "lucide-react";
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
+import { getPlayableMetaTeams } from "@/lib/coach-engine";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { computeResonances, ELEMENT_THEMES } from "@/lib/elements";
 import { profileStore } from "@/lib/profile-store";
@@ -29,6 +34,7 @@ import type {
   CoachFollowUpMessage,
   CoachStrategyResponse,
   CoachingFocus,
+  SavedPartySetup,
   ShowcaseCharacter,
 } from "@/types/genshin";
 
@@ -42,6 +48,9 @@ interface CoachTabProps {
   onUpdateChatMessages: (messages: CoachFollowUpMessage[]) => void;
   engineMode?: CoachEngineMode;
   onChangeEngineMode?: (mode: CoachEngineMode) => void;
+  savedParties?: SavedPartySetup[];
+  onSaveParty?: (name: string, characterNames: string[]) => void;
+  onRemoveSavedParty?: (partyId: string) => void;
 }
 
 const FOCUS_OPTIONS: CoachingFocus[] = [
@@ -82,6 +91,9 @@ export function CoachTab({
   onUpdateChatMessages,
   engineMode = "gemini",
   onChangeEngineMode,
+  savedParties = [],
+  onSaveParty,
+  onRemoveSavedParty,
 }: CoachTabProps) {
   const activeEngineMode = engineMode;
 
@@ -99,6 +111,9 @@ export function CoachTab({
   const [showApiKey, setShowApiKey] = useState(false);
   const [envGeminiConfigured, setEnvGeminiConfigured] = useState(false);
   const [keySavedFlash, setKeySavedFlash] = useState(false);
+  const [isLoadMenuOpen, setIsLoadMenuOpen] = useState(false);
+  const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [savePartyNameInput, setSavePartyNameInput] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -187,6 +202,33 @@ export function CoachTab({
 
   const handleImportTop4 = () => {
     onChangePartyNames(roster.slice(0, 4).map((c) => c.name));
+  };
+
+  const playableMetaTeams = useMemo(
+    () => getPlayableMetaTeams(roster),
+    [roster]
+  );
+
+  const handleEquipTeam = (characterNames: string[]) => {
+    onChangePartyNames(characterNames);
+    setIsLoadMenuOpen(false);
+  };
+
+  const handleOpenSaveModal = () => {
+    setSavePartyNameInput("");
+    setIsSaveModalOpen(true);
+  };
+
+  const handleConfirmSaveParty = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = savePartyNameInput.trim();
+    if (!trimmed || party.length === 0) return;
+    onSaveParty?.(
+      trimmed,
+      party.map((c) => c.name)
+    );
+    setSavePartyNameInput("");
+    setIsSaveModalOpen(false);
   };
 
   const handleAnalyze = async () => {
@@ -376,18 +418,185 @@ export function CoachTab({
         <div className="lg:col-span-4 space-y-5">
           {/* 4-Slot Party Composition */}
           <section className="glass-panel rounded-xl p-4 space-y-3.5">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <h2 className="font-[family-name:var(--font-space-grotesk)] text-sm font-bold text-[#dfe2f1] uppercase tracking-wider flex items-center gap-2">
                 <Swords className="w-4 h-4 text-[#f2ca50]" />
                 Party Composition
               </h2>
-              <button
-                type="button"
-                onClick={handleImportTop4}
-                className="text-[11px] font-mono px-2 py-1 rounded bg-[#1c1f2a] border border-white/12 hover:border-[#d4af37]/50 text-[#f2ca50] cursor-pointer"
-              >
-                Import Roster Top 4
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* Load Team Dropdown */}
+                <div className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsLoadMenuOpen((v) => !v)}
+                    className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-white/12 hover:border-[#d4af37]/50 text-[#f2ca50] cursor-pointer flex items-center gap-1.5 transition-colors"
+                    title="Load saved team or playable meta preset"
+                  >
+                    <FolderOpen className="w-3.5 h-3.5 text-[#f2ca50]" />
+                    <span>Load Team</span>
+                    <ChevronDown
+                      className={`w-3 h-3 text-[#99907c] transition-transform ${
+                        isLoadMenuOpen ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+
+                  {isLoadMenuOpen && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsLoadMenuOpen(false)}
+                      />
+                      <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-[#131a2a] border border-[#d4af37]/35 shadow-2xl p-3 z-50 space-y-3 max-h-[460px] overflow-y-auto">
+                        {/* Saved Teams Section */}
+                        <div className="space-y-1.5">
+                          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                            <span className="flex items-center gap-1.5 text-[#f2ca50] font-semibold">
+                              <FolderOpen className="w-3 h-3" />
+                              Saved Account Teams
+                            </span>
+                            <span className="tabular-nums">
+                              {savedParties.length}
+                            </span>
+                          </div>
+
+                          {savedParties.length === 0 ? (
+                            <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
+                              No custom teams saved yet. Click the bookmark icon to save your current 4 characters.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {savedParties.map((p) => (
+                                <div
+                                  key={p.id}
+                                  className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#d4af37]/40 transition-colors flex items-center justify-between gap-2 group"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEquipTeam(p.characterNames)}
+                                    className="flex-1 text-left min-w-0 cursor-pointer"
+                                  >
+                                    <div className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#f2ca50] truncate">
+                                      {p.name}
+                                    </div>
+                                    <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
+                                      {p.characterNames.join(" • ")}
+                                    </div>
+                                  </button>
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEquipTeam(p.characterNames)}
+                                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#f2ca50] hover:bg-[#d4af37]/25 cursor-pointer"
+                                    >
+                                      Equip
+                                    </button>
+                                    {onRemoveSavedParty && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          onRemoveSavedParty(p.id);
+                                        }}
+                                        title="Delete saved team"
+                                        className="p-1 rounded text-[#99907c] hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Playable Meta Presets Section */}
+                        <div className="space-y-1.5 pt-2 border-t border-white/10">
+                          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                            <span className="flex items-center gap-1.5 text-[#4cd6fb] font-semibold">
+                              <Sparkles className="w-3 h-3 text-[#4cd6fb]" />
+                              Playable Meta Presets
+                            </span>
+                            <span className="text-[#4cd6fb] tabular-nums">
+                              {playableMetaTeams.length} available
+                            </span>
+                          </div>
+
+                          {playableMetaTeams.length === 0 ? (
+                            <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
+                              No full meta presets matched your current roster. Sync more characters or create a custom team.
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              {playableMetaTeams.map((preset) => (
+                                <div
+                                  key={preset.id}
+                                  className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#4cd6fb]/40 transition-colors flex items-center justify-between gap-2 group"
+                                >
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEquipTeam(preset.characterNames)}
+                                    className="flex-1 text-left min-w-0 cursor-pointer"
+                                  >
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#4cd6fb] truncate">
+                                        {preset.name}
+                                      </span>
+                                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/30 text-[#4cd6fb] shrink-0">
+                                        {preset.archetype}
+                                      </span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
+                                      {preset.characterNames.join(" • ")}
+                                    </div>
+                                    <div className="text-[10px] text-[#d0c5af]/80 truncate mt-0.5">
+                                      {preset.description}
+                                    </div>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleEquipTeam(preset.characterNames)}
+                                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/40 text-[#4cd6fb] hover:bg-[#00b4d8]/25 cursor-pointer shrink-0"
+                                  >
+                                    Equip
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Quick Import Action */}
+                        <div className="pt-2 border-t border-white/10">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleImportTop4();
+                              setIsLoadMenuOpen(false);
+                            }}
+                            className="w-full py-1.5 px-2 rounded-lg bg-[#1c1f2a] hover:bg-[#262a35] border border-white/12 text-[11px] font-mono text-[#f2ca50] text-center cursor-pointer transition-colors"
+                          >
+                            Import Roster Top 4
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Save Party Setup Button */}
+                <button
+                  type="button"
+                  onClick={handleOpenSaveModal}
+                  disabled={party.length === 0}
+                  title="Save current party setup to account"
+                  className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-white/12 hover:border-[#d4af37]/50 text-[#d0c5af] hover:text-[#f2ca50] cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+                >
+                  <BookmarkPlus className="w-3.5 h-3.5 text-[#f2ca50]" />
+                  <span className="hidden sm:inline">Save</span>
+                </button>
+              </div>
             </div>
 
             {party.length === 0 ? (
@@ -996,6 +1205,90 @@ export function CoachTab({
           </section>
         </div>
       </div>
+
+      {/* Save Party Setup Modal */}
+      {isSaveModalOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="glass-panel-gold rounded-xl max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-start justify-between gap-3 border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/40 flex items-center justify-center text-[#f2ca50]">
+                  <BookmarkPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-[family-name:var(--font-space-grotesk)] text-base font-bold text-[#dfe2f1]">
+                    Save Party Setup
+                  </h3>
+                  <p className="text-xs text-[#99907c]">
+                    Store current 4-slot lineup to your account profile
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsSaveModalOpen(false)}
+                className="p-1 rounded-md text-[#99907c] hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleConfirmSaveParty} className="space-y-4">
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#99907c] mb-1.5">
+                  Current Party Lineup
+                </label>
+                <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/10 flex items-center gap-2 flex-wrap">
+                  {party.map((char) => (
+                    <span
+                      key={char.avatarId}
+                      className="text-xs font-mono px-2 py-0.5 rounded bg-[#1c1f2a] border border-white/12 text-[#dfe2f1]"
+                    >
+                      {char.name}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="saved-party-name"
+                  className="block text-xs font-mono uppercase tracking-wider text-[#99907c] mb-1.5"
+                >
+                  Setup Name
+                </label>
+                <input
+                  id="saved-party-name"
+                  type="text"
+                  required
+                  autoFocus
+                  value={savePartyNameInput}
+                  onChange={(e) => setSavePartyNameInput(e.target.value)}
+                  placeholder="e.g. Abyss 12-1 Overvape, Hyperbloom Team"
+                  className="w-full px-3 py-2 rounded-lg bg-[#0a0e18] border border-white/15 text-xs text-[#dfe2f1] focus:outline-none focus:border-[#d4af37]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setIsSaveModalOpen(false)}
+                  className="px-3 py-1.5 rounded-lg bg-[#1c1f2a] border border-white/10 text-xs font-mono text-[#d0c5af] hover:bg-[#262a35] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={!savePartyNameInput.trim()}
+                  className="px-3.5 py-1.5 rounded-lg bg-[#d4af37] text-black text-xs font-mono font-bold hover:bg-[#e5c158] transition-colors cursor-pointer disabled:opacity-50"
+                >
+                  Save Setup
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

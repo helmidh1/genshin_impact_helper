@@ -8,6 +8,7 @@ import {
   getCoachStrategy,
   getDirectives,
   getParty,
+  getSavedPartySetups,
   SERVER_SNAPSHOT,
 } from "@/lib/profile-store";
 import { reconcileResin } from "@/lib/directives-engine";
@@ -400,5 +401,38 @@ describe("ProfileStore - Legacy V1 Migration", () => {
     // Fresh store instance with same storage retains the setting
     const reloaded = createProfileStore(adapter);
     expect(reloaded.getCoachEngineMode()).toBe("heuristic");
+  });
+
+  it("saves, retrieves, and removes preconfigured party setups by UID", () => {
+    const adapter = new MemoryStorageAdapter();
+    const store = createProfileStore(adapter);
+    const uid = DEMO_TRAVELER_PROFILE.uid;
+
+    expect(store.getSavedPartySetups(uid)).toEqual([]);
+
+    const saved = store.savePartySetup(uid, "Rational Core", [
+      "Raiden Shogun",
+      "Xiangling",
+      "Xingqiu",
+      "Bennett",
+    ]);
+
+    expect(saved.id).toBeDefined();
+    expect(saved.name).toBe("Rational Core");
+    expect(saved.characterNames).toHaveLength(4);
+
+    expect(store.getSavedPartySetups(uid)).toHaveLength(1);
+    expect(store.getSavedPartySetups(uid)[0].name).toBe("Rational Core");
+
+    // Pure query helper on state
+    expect(getSavedPartySetups(store.getState(), uid)).toHaveLength(1);
+
+    // Persistence across store instances
+    const reloaded = createProfileStore(adapter);
+    expect(reloaded.getSavedPartySetups(uid)).toHaveLength(1);
+
+    // Removal
+    store.removeSavedPartySetup(uid, saved.id);
+    expect(store.getSavedPartySetups(uid)).toHaveLength(0);
   });
 });

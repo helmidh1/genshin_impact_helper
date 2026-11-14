@@ -512,3 +512,128 @@ export function buildFallbackEquipmentAdvice(params: {
     source: "fallback",
   };
 }
+
+export interface MetaTeamPreset {
+  id: string;
+  name: string;
+  archetype: string;
+  characterNames: [string, string, string, string];
+  description: string;
+}
+
+export const META_TEAM_PRESETS: MetaTeamPreset[] = [
+  {
+    id: "raiden-national",
+    name: "Raiden National (Rational)",
+    archetype: "Vaporize / Overload",
+    characterNames: ["Raiden Shogun", "Xiangling", "Xingqiu", "Bennett"],
+    description: "Benchmark continuous burst battery and multi-reaction engine.",
+  },
+  {
+    id: "arlecchino-vape",
+    name: "Arlecchino Vaporize",
+    archetype: "Vaporize",
+    characterNames: ["Arlecchino", "Xingqiu", "Bennett", "Zhongli"],
+    description: "Consistent forward Blood-Debt burst-normal attack vaporize rotations.",
+  },
+  {
+    id: "raiden-furina-overvape",
+    name: "Raiden Furina Overvape",
+    archetype: "Electro-Charged / Vaporize",
+    characterNames: ["Raiden Shogun", "Furina", "Kaedehara Kazuha", "Bennett"],
+    description: "High frontload Musou no Hitotachi empowered by Fanfare and Inspiration Field.",
+  },
+  {
+    id: "arlecchino-mono-pyro",
+    name: "Arlecchino Mono Pyro",
+    archetype: "Mono Pyro",
+    characterNames: ["Arlecchino", "Kaedehara Kazuha", "Xiangling", "Bennett"],
+    description: "Pure Pyro damage amplification through VV shred and double ATK buffers.",
+  },
+  {
+    id: "childe-international",
+    name: "Childe International",
+    archetype: "Forward Vaporize / Swirl",
+    characterNames: ["Tartaglia", "Kaedehara Kazuha", "Xiangling", "Bennett"],
+    description: "High-ceiling quadratic scaling Riptide and Pyronado AoE team.",
+  },
+  {
+    id: "hu-tao-double-hydro",
+    name: "Hu Tao Double Hydro",
+    archetype: "Vaporize",
+    characterNames: ["Hu Tao", "Yelan", "Xingqiu", "Zhongli"],
+    description: "Uninterrupted single-target vaporize with Hydro resonance and shield shred.",
+  },
+  {
+    id: "arlecchino-chevreuse",
+    name: "Arlecchino Chevreuse Overload",
+    archetype: "Chevreuse Overload",
+    characterNames: ["Arlecchino", "Chevreuse", "Fischl", "Bennett"],
+    description: "40% Pyro/Electro shred without Anemo via Chevreuse passive.",
+  },
+  {
+    id: "mavuika-nightsoul-hyper",
+    name: "Mavuika Nightsoul Hyper",
+    archetype: "Nightsoul / Vaporize",
+    characterNames: ["Mavuika", "Furina", "Xilonen", "Bennett"],
+    description: "Natlan Nightsoul burst scaling amplified by Fanfare and Cinder City.",
+  },
+  {
+    id: "alhaitham-quickbloom",
+    name: "Alhaitham Quickbloom",
+    archetype: "Quickbloom",
+    characterNames: ["Alhaitham", "Nahida", "Xingqiu", "Kuki Shinobu"],
+    description: "Hybrid Spread-Hyperbloom reaction engine with consistent Chisel-Light mirrors.",
+  },
+  {
+    id: "neuvillette-hyper",
+    name: "Neuvillette Hypercarry",
+    archetype: "Charged Attack Hyper",
+    characterNames: ["Neuvillette", "Furina", "Kaedehara Kazuha", "Zhongli"],
+    description: "Draconic Glory stacking with Fanfare and VV shred powering continuous beams.",
+  },
+  {
+    id: "ayaka-premium-freeze",
+    name: "Ayaka Premium Freeze",
+    archetype: "Permafrost Freeze",
+    characterNames: ["Kamisato Ayaka", "Shenhe", "Kaedehara Kazuha", "Sangonomiya Kokomi"],
+    description: "High frontload Soumetsu blizzard with Shenhe quills and 100% frozen uptime.",
+  },
+  {
+    id: "navia-geo-resonance",
+    name: "Navia Crystallize Cannon",
+    archetype: "Crystallize Geo Resonance",
+    characterNames: ["Navia", "Zhongli", "Xiangling", "Bennett"],
+    description: "Rosula Shrapnel charge generation with Pyro off-field application.",
+  },
+  {
+    id: "clorinde-aggravate",
+    name: "Clorinde Aggravate",
+    archetype: "Aggravate",
+    characterNames: ["Clorinde", "Fischl", "Nahida", "Zhongli"],
+    description: "High attack-speed Bond of Life impale thrusts driving Fischl A4 passives.",
+  },
+  {
+    id: "nilou-superbloom",
+    name: "Nilou Bountiful Superbloom",
+    archetype: "Bountiful Bloom",
+    characterNames: ["Nilou", "Nahida", "Sangonomiya Kokomi", "Collei"],
+    description: "Instantaneous Bountiful Core detonation without Pyro or Electro triggers.",
+  },
+  {
+    id: "kinich-burgeon",
+    name: "Kinich Nightsoul Burgeon",
+    archetype: "Burning / Burgeon",
+    characterNames: ["Kinich", "Emilie", "Dehya", "Bennett"],
+    description: "Looping grapple cannon shots powered by continuous Burning uptime.",
+  },
+];
+
+export function getPlayableMetaTeams(
+  roster: ShowcaseCharacter[]
+): MetaTeamPreset[] {
+  const rosterNames = new Set(roster.map((c) => c.name));
+  return META_TEAM_PRESETS.filter((preset) =>
+    preset.characterNames.every((name) => rosterNames.has(name))
+  );
+}

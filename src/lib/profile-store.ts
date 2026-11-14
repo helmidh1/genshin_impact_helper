@@ -9,6 +9,7 @@ import type {
   HoyolabCheckinState,
   HoyolabCredentialsPayload,
   ProfileState,
+  SavedPartySetup,
   TravelerProfile,
 } from "@/types/genshin";
 
@@ -69,6 +70,7 @@ export function createDefaultState(): ProfileState {
     coachStrategyByUid: {},
     coachChatByUid: {},
     coachEngineMode: "gemini",
+    savedPartiesByUid: {},
     checkinState: null,
     equipmentAdviceByChar: {},
   };
@@ -527,6 +529,50 @@ export class ProfileStore {
   getCoachEngineMode(): CoachEngineMode {
     return getCoachEngineMode(this.state);
   }
+
+  savePartySetup(
+    uid: string,
+    name: string,
+    characterNames: string[]
+  ): SavedPartySetup {
+    const existing = this.getSavedPartySetups(uid);
+    const setup: SavedPartySetup = {
+      id: `party-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name: name.trim() || `Team Setup ${existing.length + 1}`,
+      characterNames: characterNames.slice(0, 4),
+      createdAt: new Date().toISOString(),
+    };
+
+    const nextList = [setup, ...existing];
+    this.state = {
+      ...this.state,
+      savedPartiesByUid: {
+        ...(this.state.savedPartiesByUid ?? {}),
+        [uid]: nextList,
+      },
+    };
+    this.persist();
+    this.notify();
+    return setup;
+  }
+
+  removeSavedPartySetup(uid: string, partyId: string): void {
+    const existing = this.getSavedPartySetups(uid);
+    const filtered = existing.filter((p) => p.id !== partyId);
+    this.state = {
+      ...this.state,
+      savedPartiesByUid: {
+        ...(this.state.savedPartiesByUid ?? {}),
+        [uid]: filtered,
+      },
+    };
+    this.persist();
+    this.notify();
+  }
+
+  getSavedPartySetups(uid?: string): SavedPartySetup[] {
+    return getSavedPartySetups(this.state, uid);
+  }
 }
 
 // Pure Domain Queries on ProfileState (safe for SSR, hydration snapshots, and React components)
@@ -574,6 +620,14 @@ export function getCoachChat(
 
 export function getCoachEngineMode(state: ProfileState): CoachEngineMode {
   return state.coachEngineMode ?? "gemini";
+}
+
+export function getSavedPartySetups(
+  state: ProfileState,
+  uid?: string
+): SavedPartySetup[] {
+  const targetUid = uid ?? state.activeUid;
+  return state.savedPartiesByUid?.[targetUid] ?? [];
 }
 
 export function createProfileStore(

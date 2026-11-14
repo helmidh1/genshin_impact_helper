@@ -448,6 +448,13 @@ export interface EquipmentCoachQueryResponse {
   interactionId?: string;
 }
 
+export interface SavedPartySetup {
+  id: string;
+  name: string;
+  characterNames: string[];
+  createdAt: string;
+}
+
 export interface ProfileState {
   version: 2;
   activeUid: string;
@@ -457,6 +464,7 @@ export interface ProfileState {
   coachStrategyByUid: Record<string, CoachStrategyResponse | null>;
   coachChatByUid: Record<string, CoachFollowUpMessage[]>;
   coachEngineMode?: CoachEngineMode;
+  savedPartiesByUid?: Record<string, SavedPartySetup[]>;
   checkinState: HoyolabCheckinState | null;
   equipmentAdviceByChar: Record<string, EquipmentCoachQueryResponse>;
 }

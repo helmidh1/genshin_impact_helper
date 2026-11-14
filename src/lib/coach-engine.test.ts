@@ -3,6 +3,7 @@ import {
   buildFallbackEquipmentAdvice,
   buildFallbackFollowUpAnswer,
   buildFallbackStrategy,
+  getPlayableMetaTeams,
   recommendedErFor,
   summarizeParty,
 } from "./coach-engine";
@@ -474,5 +475,39 @@ describe("CoachEngine: Follow-Up Offline Synthesis", () => {
     expect(reply).toContain("Offline heuristic coach: For \"How should I double swirl?\" (Active rotation: Vaporize 20s)");
     expect(reply).toContain("Kaedehara Kazuha (165% ER)");
     expect(reply).toContain(mockEncounter.name);
+  });
+});
+
+describe("CoachEngine: Playable Meta Lineups", () => {
+  it("discovers playable meta teams when all 4 characters are owned in roster", () => {
+    const roster = [
+      createMockCharacter("Raiden Shogun", "Electro"),
+      createMockCharacter("Xiangling", "Pyro"),
+      createMockCharacter("Xingqiu", "Hydro"),
+      createMockCharacter("Bennett", "Pyro"),
+    ];
+
+    const playable = getPlayableMetaTeams(roster);
+    expect(playable.length).toBeGreaterThanOrEqual(1);
+    const rational = playable.find((t) => t.id === "raiden-national");
+    expect(rational).toBeDefined();
+    expect(rational?.characterNames).toEqual([
+      "Raiden Shogun",
+      "Xiangling",
+      "Xingqiu",
+      "Bennett",
+    ]);
+  });
+
+  it("excludes meta teams if even one required character is missing from roster", () => {
+    const rosterWithoutBennett = [
+      createMockCharacter("Raiden Shogun", "Electro"),
+      createMockCharacter("Xiangling", "Pyro"),
+      createMockCharacter("Xingqiu", "Hydro"),
+    ];
+
+    const playable = getPlayableMetaTeams(rosterWithoutBennett);
+    const rational = playable.find((t) => t.id === "raiden-national");
+    expect(rational).toBeUndefined();
   });
 });

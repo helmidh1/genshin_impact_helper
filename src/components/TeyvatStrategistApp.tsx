@@ -18,6 +18,7 @@ import {
   getCoachStrategy,
   getDirectives,
   getParty,
+  getSavedPartySetups,
   profileStore,
 } from "@/lib/profile-store";
 import { useProfileStore } from "@/lib/use-profile-store";
@@ -197,6 +198,7 @@ export function TeyvatStrategistApp() {
     createInitialPreviewStrategy(activeProfile.characters);
   const chatMessages = getCoachChat(storeState);
   const coachEngineMode = getCoachEngineMode(storeState);
+  const savedParties = getSavedPartySetups(storeState, activeProfile.uid);
   const savedProfiles = storeState.profiles;
   const checkinState = storeState.checkinState;
 
@@ -476,6 +478,14 @@ export function TeyvatStrategistApp() {
     profileStore.setCoachEngineMode(next);
   };
 
+  const handleSaveParty = (name: string, characterNames: string[]) => {
+    profileStore.savePartySetup(activeProfile.uid, name, characterNames);
+  };
+
+  const handleRemoveSavedParty = (partyId: string) => {
+    profileStore.removeSavedPartySetup(activeProfile.uid, partyId);
+  };
+
   if (!hasMounted) {
     return <TeyvatSkeletonShell />;
   }
@@ -562,6 +572,9 @@ export function TeyvatStrategistApp() {
             onUpdateChatMessages={handleUpdateChat}
             engineMode={coachEngineMode}
             onChangeEngineMode={handleUpdateEngineMode}
+            savedParties={savedParties}
+            onSaveParty={handleSaveParty}
+            onRemoveSavedParty={handleRemoveSavedParty}
           />
         )}
       </main>
