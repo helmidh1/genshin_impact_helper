@@ -24,6 +24,7 @@ interface FollowUpRequestBody {
   question: string;
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
+  activeStrategyNote?: string;
   previousInteractionId?: string;
   apiKey?: string;
 }
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
         question: body.question.trim(),
         party: body.party,
         encounter: body.encounter,
+        activeStrategyNote: body.activeStrategyNote,
         previousInteractionId: body.previousInteractionId,
         apiKey: body.apiKey,
       });

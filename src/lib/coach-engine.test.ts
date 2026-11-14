@@ -179,6 +179,27 @@ describe("CoachEngine: Party Summarization", () => {
     expect(summary).toContain("Artifacts: 4pc Fragment of Harmonic Whimsy");
     expect(summary).toContain("Stats: HP 21340, ATK 2420, EM 96, CR 82.4%, CD 184.2%, ER 114.5%");
   });
+
+  it("includes Crit Value and weapon trigger mechanics in party summary", () => {
+    const bennett = createMockCharacter("Bennett", "Pyro", {
+      weapon: {
+        name: "Favonius Sword",
+        level: 90,
+        refinement: 5,
+        rarity: 4,
+        baseAtk: 454,
+        subStatLabel: "Energy Recharge",
+        subStatValue: "61.3%",
+        passiveSummary: "Crit hits generate white energy particles",
+      },
+      totalCv: 135.5,
+    });
+
+    const summary = summarizeParty([bennett]);
+    expect(summary).toContain("135.5 CV");
+    expect(summary).toContain("Favonius Sword R5");
+    expect(summary).toContain("White Particle Battery");
+  });
 });
 
 describe("CoachEngine: Fallback Strategy Generation", () => {
@@ -202,8 +223,8 @@ describe("CoachEngine: Fallback Strategy Generation", () => {
 
     // Buff bars for the 3 supports
     expect(strategy.buffBars.length).toBe(3);
-    expect(strategy.buffBars[0].name).toContain("VV Shred (10s)");
-    expect(strategy.buffBars[1].name).toContain("Burst Field / Buff");
+    expect(strategy.buffBars.some((b) => b.name.includes("VV Shred"))).toBe(true);
+    expect(strategy.buffBars.some((b) => b.name.includes("Inspiration Field") || b.name.includes("Burst Field"))).toBe(true);
 
     // Energy checks
     expect(strategy.energyChecks.length).toBe(4);
@@ -286,6 +307,61 @@ describe("CoachEngine: Fallback Strategy Generation", () => {
 
     const strategyAnemo = buildFallbackStrategy(withAnemo, mockEncounter, "Optimal Rotation");
     expect(strategyAnemo.criticalNote).toContain("Ensure your Anemo unit swirls your main carry's element");
+  });
+
+  it("sequences Raiden National rotation with setup and buffers before Raiden burst window", () => {
+    const bennett = createMockCharacter("Bennett", "Pyro");
+    const xiangling = createMockCharacter("Xiangling", "Pyro");
+    const xingqiu = createMockCharacter("Xingqiu", "Hydro");
+    const raiden = createMockCharacter("Raiden Shogun", "Electro");
+    // User put Bennett in slot 1 (idx 0), Raiden in slot 4 (idx 3)
+    const party = [bennett, xiangling, xingqiu, raiden];
+
+    const strategy = buildFallbackStrategy(party, mockEncounter, "Optimal Rotation");
+
+    // Raiden should be identified as the main on-field carry
+    const lastStep = strategy.rotationSteps[strategy.rotationSteps.length - 1];
+    expect(lastStep.character).toBe("Raiden Shogun");
+    expect(lastStep.action).toContain("Burst / Combo Window");
+
+    // Raiden Skill (E) should be setup first to empower team bursts
+    const firstStep = strategy.rotationSteps[0];
+    expect(firstStep.character).toBe("Raiden Shogun");
+    expect(firstStep.action).toContain("E (Setup)");
+
+    // Bennett Q should precede Xiangling Q
+    const bennettStepIdx = strategy.rotationSteps.findIndex(
+      (s) => s.character === "Bennett" && s.action.includes("Q")
+    );
+    const xianglingStepIdx = strategy.rotationSteps.findIndex(
+      (s) => s.character === "Xiangling" && s.action.includes("Q")
+    );
+    expect(bennettStepIdx).toBeGreaterThan(-1);
+    expect(xianglingStepIdx).toBeGreaterThan(bennettStepIdx);
+  });
+
+  it("includes Furina Fanfare and VV Shred in buff bars when present", () => {
+    const neuvillette = createMockCharacter("Neuvillette", "Hydro");
+    const furina = createMockCharacter("Furina", "Hydro");
+    const kazuha = createMockCharacter("Kaedehara Kazuha", "Anemo");
+    const baizhu = createMockCharacter("Baizhu", "Dendro");
+    const party = [neuvillette, furina, kazuha, baizhu];
+
+    const strategy = buildFallbackStrategy(party, mockEncounter, "Optimal Rotation");
+
+    // Buff bars should include Furina's 18s Fanfare and Kazuha's 10s VV Shred
+    const fanfareBar = strategy.buffBars.find((b) => b.name.includes("Fanfare"));
+    expect(fanfareBar).toBeDefined();
+    expect(fanfareBar?.duration).toBe("18s");
+
+    const vvBar = strategy.buffBars.find((b) => b.name.includes("VV Shred"));
+    expect(vvBar).toBeDefined();
+    expect(vvBar?.duration).toBe("10s");
+
+    // Neuvillette should be identified as the on-field carry
+    const lastStep = strategy.rotationSteps[strategy.rotationSteps.length - 1];
+    expect(lastStep.character).toBe("Neuvillette");
+    expect(lastStep.action).toContain("Charged Attack");
   });
 });
 

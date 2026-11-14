@@ -15,6 +15,29 @@ import type {
 } from "@/types/genshin";
 
 const MODEL_ID = "gemini-3.8-flash";
+export const GEMINI_TIMEOUT_MS = 25000;
+
+/**
+ * Bounds any asynchronous operation with a hard timeout, ensuring requests never hang indefinitely.
+ */
+export async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  operationName: string
+): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${operationName} timed out after ${Math.round(timeoutMs / 1000)}s.`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
 
 const STRATEGY_JSON_SCHEMA = {
   type: "object",
@@ -193,17 +216,21 @@ export async function generateCoachStrategy(params: {
       "Return a tight, practical, frame-aware Genshin rotation and coaching breakdown following KQM theorycraft standards. Use hex colors for buffBars (#FF5A36 Pyro, #00B4D8 Hydro, #AF52DE Electro, #70D6FF Cryo, #70E000 Dendro, #5CE1E6 Anemo, #F3C969 Geo, #D4AF37 Gold) and startPct/widthPct between 0 and 100.",
     ].join("\n");
 
-    const interaction = await client.interactions.create({
-      model: MODEL_ID,
-      system_instruction:
-        "You are Teyvat Strategist, an expert Genshin Impact combat & KQM theorycraft coach. Always base advice on the exact character constellations, weapons, artifact sets, and ER/Crit stats provided. Be concise, concrete, and accurate.",
-      input: prompt,
-      response_format: {
-        type: "text",
-        mime_type: "application/json",
-        schema: STRATEGY_JSON_SCHEMA,
-      },
-    });
+    const interaction = await withTimeout(
+      client.interactions.create({
+        model: MODEL_ID,
+        system_instruction:
+          "You are Teyvat Strategist, an expert Genshin Impact combat & KQM theorycraft coach. Always base advice on the exact character constellations, weapons, artifact sets, and ER/Crit stats provided. Be concise, concrete, and accurate.",
+        input: prompt,
+        response_format: {
+          type: "text",
+          mime_type: "application/json",
+          schema: STRATEGY_JSON_SCHEMA,
+        },
+      }),
+      GEMINI_TIMEOUT_MS,
+      "Gemini strategy generation"
+    );
 
     const rawText = interaction.output_text;
     if (!rawText) {
@@ -235,33 +262,44 @@ export async function askCoachFollowUp(params: {
   question: string;
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
+  activeStrategyNote?: string;
   previousInteractionId?: string;
   apiKey?: string;
 }): Promise<{ answer: string; interactionId?: string; source: "gemini" | "fallback" }> {
   const apiKey = params.apiKey?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     const names = params.party.map((c) => `${c.name} (${c.stats.er}% ER)`).join(", ");
+    const rotationSnippet = params.activeStrategyNote
+      ? ` (Active rotation: ${params.activeStrategyNote})`
+      : "";
     return {
       source: "fallback",
-      answer: `Offline coach mode (no Gemini API key configured): For "${params.question}", review your active roster (${names}) against ${params.encounter.name}. Ensure your highest-cost off-field bursts meet their ER breakpoints first, swirl your carry element before Bennett/support fields expire, and save burst windows for ${params.encounter.name}'s vulnerability phase.`,
+      answer: `Offline coach mode (no Gemini API key configured): For "${params.question}"${rotationSnippet}, review your active roster (${names}) against ${params.encounter.name}. Ensure your highest-cost off-field bursts meet their ER breakpoints first, swirl your carry element before Bennett/support fields expire, and save burst windows for ${params.encounter.name}'s vulnerability phase.`,
     };
   }
 
   try {
     const client = new GoogleGenAI({ apiKey });
+    const strategyContext = params.activeStrategyNote
+      ? `Active Strategy Summary: ${params.activeStrategyNote}\n\n`
+      : "";
     const contextHeader = params.previousInteractionId
       ? ""
       : `Party context:\n${summarizeParty(params.party)}\nEncounter: ${params.encounter.name} (${params.encounter.mechanicsAlert})\n\n`;
 
-    const interaction = await client.interactions.create({
-      model: MODEL_ID,
-      system_instruction:
-        "You are Teyvat Strategist, an expert Genshin Impact combat coach. Answer follow-up questions concisely in plain Markdown with concrete button inputs (N3D, CA, E, Q), ICD notes, and particle funneling tips.",
-      input: `${contextHeader}User question: ${params.question}`,
-      ...(params.previousInteractionId
-        ? { previous_interaction_id: params.previousInteractionId }
-        : {}),
-    });
+    const interaction = await withTimeout(
+      client.interactions.create({
+        model: MODEL_ID,
+        system_instruction:
+          "You are Teyvat Strategist, an expert Genshin Impact combat coach. Answer follow-up questions concisely in plain Markdown with concrete button inputs (N3D, CA, E, Q), ICD notes, and particle funneling tips.",
+        input: `${strategyContext}${contextHeader}User question: ${params.question}`,
+        ...(params.previousInteractionId
+          ? { previous_interaction_id: params.previousInteractionId }
+          : {}),
+      }),
+      GEMINI_TIMEOUT_MS,
+      "Gemini follow-up request"
+    );
 
     return {
       answer: interaction.output_text ?? "No response generated.",
@@ -349,17 +387,21 @@ export async function askCoachEquipment(params: {
     ].filter(Boolean).join("\n");
 
     const client = new GoogleGenAI({ apiKey });
-    const interaction = await client.interactions.create({
-      model: MODEL_ID,
-      system_instruction:
-        "You are Teyvat Strategist's Equipment & Build Theorycraft Coach. Base your weapon rankings, artifact sets, and stat breakpoints on authoritative community standards from Game8, Icy-Veins, and KeqingMains (KQM). Evaluate the player's exact equipped weapon and stats with precise, practical, high-value advice.",
-      input: prompt,
-      response_format: {
-        type: "text",
-        mime_type: "application/json",
-        schema: EQUIPMENT_JSON_SCHEMA,
-      },
-    });
+    const interaction = await withTimeout(
+      client.interactions.create({
+        model: MODEL_ID,
+        system_instruction:
+          "You are Teyvat Strategist's Equipment & Build Theorycraft Coach. Base your weapon rankings, artifact sets, and stat breakpoints on authoritative community standards from Game8, Icy-Veins, and KeqingMains (KQM). Evaluate the player's exact equipped weapon and stats with precise, practical, high-value advice.",
+        input: prompt,
+        response_format: {
+          type: "text",
+          mime_type: "application/json",
+          schema: EQUIPMENT_JSON_SCHEMA,
+        },
+      }),
+      GEMINI_TIMEOUT_MS,
+      "Gemini equipment evaluation"
+    );
 
     const rawText = interaction.output_text;
     if (!rawText) {

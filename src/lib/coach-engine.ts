@@ -24,12 +24,28 @@ export function summarizeParty(party: ShowcaseCharacter[]): string {
   return party
     .map((c, idx) => {
       const sets = c.artifactSets.map((s) => `${s.count}pc ${s.name}`).join(" + ");
+      const weaponTrigger = c.weapon.name.startsWith("Favonius")
+        ? " [White Particle Battery]"
+        : c.weapon.name.startsWith("Sacrificial")
+        ? " [Skill Reset Proc]"
+        : c.weapon.name.includes("Thrilling Tales")
+        ? " [TTDS +48% ATK Swap Buff]"
+        : "";
+
+      const sands = c.artifacts?.find((a) => a.slot === "Sands");
+      const goblet = c.artifacts?.find((a) => a.slot === "Goblet");
+      const circlet = c.artifacts?.find((a) => a.slot === "Circlet");
+      const mainStats =
+        sands || goblet || circlet
+          ? ` | Main: Sands ${sands?.mainStatLabel ?? "N/A"} / Goblet ${goblet?.mainStatLabel ?? "N/A"} / Circlet ${circlet?.mainStatLabel ?? "N/A"}`
+          : "";
+
       return [
         `Slot ${idx + 1}: ${c.name} (${c.element}, C${c.constellation}, Lv.${c.level})`,
         `Talents: ${c.talents.normal}/${c.talents.skill}/${c.talents.burst}`,
-        `Weapon: ${c.weapon.name} R${c.weapon.refinement}`,
+        `Weapon: ${c.weapon.name} R${c.weapon.refinement}${weaponTrigger}`,
         `Artifacts: ${sets || "Mixed"}`,
-        `Stats: HP ${c.stats.maxHp}, ATK ${c.stats.atk}, EM ${c.stats.em}, CR ${c.stats.critRate}%, CD ${c.stats.critDmg}%, ER ${c.stats.er}%`,
+        `Stats: HP ${c.stats.maxHp}, ATK ${c.stats.atk}, EM ${c.stats.em}, CR ${c.stats.critRate}%, CD ${c.stats.critDmg}%, ER ${c.stats.er}% (${c.totalCv.toFixed(1)} CV)${mainStats}`,
       ].join(" | ");
     })
     .join("\n");
@@ -103,7 +119,95 @@ interface SupportProfile {
   buffDuration: string;
 }
 
+const ON_FIELD_CARRIES = new Set([
+  "Raiden Shogun",
+  "Neuvillette",
+  "Hu Tao",
+  "Arlecchino",
+  "Alhaitham",
+  "Navia",
+  "Mualani",
+  "Kinich",
+  "Xiao",
+  "Kamisato Ayaka",
+  "Kamisato Ayato",
+  "Ganyu",
+  "Yoimiya",
+  "Wanderer",
+  "Arataki Itto",
+  "Cyno",
+  "Keqing",
+  "Clorinde",
+  "Sethos",
+  "Gaming",
+  "Diluc",
+  "Eula",
+  "Lyney",
+  "Wriothesley",
+  "Tighnari",
+  "Tartaglia",
+  "Chasca",
+  "Klee",
+  "Yanfei",
+  "Razor",
+  "Heizou",
+]);
+
+function getCarryWindowAction(character: ShowcaseCharacter): string {
+  if (character.name === "Neuvillette") {
+    return "Neuvillette Charged Attack Combo Window";
+  }
+  if (character.name === "Raiden Shogun") {
+    return "Raiden Shogun Musou Shinsetsu (Q) -> N3CA Burst / Combo Window";
+  }
+  if (character.name === "Hu Tao") {
+    return "Hu Tao Guide to Afterlife (E) -> N2CD Vaporize Window";
+  }
+  if (character.name === "Arlecchino") {
+    return "Arlecchino Masquerade of the Red Death (CA -> N3D) Window";
+  }
+  if (character.name === "Alhaitham") {
+    return "Alhaitham Q -> 3-Mirror Chisel Infusion (N3D) Window";
+  }
+  if (character.name === "Navia") {
+    return "Navia Ceremonial Crystalshot (Hold E x2) Gunbrella Window";
+  }
+  return `${character.name} Main Burst / Combo Window`;
+}
+
 function getSupportProfile(character: ShowcaseCharacter): SupportProfile {
+  if (character.name === "Furina") {
+    return {
+      action: "Furina E + Q",
+      notes: "Summon Salon Solitaire pets and activate Universal Revelry Fanfare buff.",
+      buffName: "Furina Fanfare (18s)",
+      buffDuration: "18s",
+    };
+  }
+  if (character.name === "Bennett") {
+    return {
+      action: "Bennett Q + E",
+      notes: "Cast Fantastic Voyage field to buff ATK and snapshot off-field Bursts.",
+      buffName: "Bennett Inspiration Field (12s)",
+      buffDuration: "12s",
+    };
+  }
+  if (character.name === "Zhongli") {
+    return {
+      action: "Zhongli Hold E",
+      notes: "Deploy Jade Shield for interruption resistance and -20% universal RES shred.",
+      buffName: "Zhongli Jade Shield (20s)",
+      buffDuration: "20s",
+    };
+  }
+  if (character.name === "Nahida") {
+    return {
+      action: "Nahida Hold E + Q",
+      notes: "Mark enemies with All Schemes to Know and deploy Maya Shrine for EM buff.",
+      buffName: "Nahida Shrine of Maya (15s)",
+      buffDuration: "15s",
+    };
+  }
   if (character.element === "Anemo") {
     return {
       action: `${character.name} Hold E + Q`,
@@ -112,12 +216,75 @@ function getSupportProfile(character: ShowcaseCharacter): SupportProfile {
       buffDuration: "10s",
     };
   }
+  if (character.name === "Xingqiu") {
+    return {
+      action: "Xingqiu Q + E",
+      notes: "Summon Rain Swords for continuous off-field Hydro application and damage reduction.",
+      buffName: "Xingqiu Raincutters (18s)",
+      buffDuration: "18s",
+    };
+  }
+  if (character.name === "Yelan") {
+    return {
+      action: "Yelan Q + E",
+      notes: "Cast Exquisite Throw to provide ramp-up DMG% bonus to on-field character.",
+      buffName: "Yelan Exquisite Throw (15s)",
+      buffDuration: "15s",
+    };
+  }
+  if (character.name === "Xiangling") {
+    return {
+      action: "Xiangling Q + E",
+      notes: "Snapshot Bennett ATK buff with Pyronado and deploy Guoba.",
+      buffName: "Xiangling Pyronado (14s)",
+      buffDuration: "14s",
+    };
+  }
   return {
     action: `${character.name} Q + E`,
     notes: "Snapshot / deploy off-field burst and funnel particles forward.",
     buffName: `${character.name} Burst Field / Buff`,
     buffDuration: "12s",
   };
+}
+
+function getSupportPriority(char: ShowcaseCharacter): number {
+  if (
+    char.name === "Zhongli" ||
+    char.name === "Furina" ||
+    char.name === "Baizhu" ||
+    char.name === "Nahida"
+  ) {
+    return 1;
+  }
+  if (
+    char.element === "Anemo" ||
+    char.name === "Xilonen" ||
+    char.name === "Chevreuse"
+  ) {
+    return 2;
+  }
+  if (
+    char.name === "Bennett" ||
+    char.name === "Kujou Sara" ||
+    char.name === "Gorou" ||
+    char.name === "Faruzan" ||
+    char.name === "Shenhe"
+  ) {
+    return 3;
+  }
+  if (char.name === "Xingqiu" || char.name === "Yelan") {
+    return 4;
+  }
+  if (
+    char.name === "Xiangling" ||
+    char.name === "Fischl" ||
+    char.name === "Yae Miko" ||
+    char.name === "Chiori"
+  ) {
+    return 5;
+  }
+  return 6;
 }
 
 export function buildFallbackStrategy(
@@ -131,8 +298,13 @@ export function buildFallbackStrategy(
   const resonanceNote =
     resonances.length > 0 ? resonances[0].name : "Rainbow Elemental Coverage";
 
-  const supports = party.slice(1);
-  const carry = party[0];
+  // Identify main on-field carry (known carry, or slot 0)
+  const carry =
+    party.find((p) => ON_FIELD_CARRIES.has(p.name)) ??
+    party[0];
+
+  const supports = party.filter((p) => p.avatarId !== carry?.avatarId);
+  supports.sort((a, b) => getSupportPriority(a) - getSupportPriority(b));
 
   const steps = [
     ...(carry
@@ -167,14 +339,14 @@ export function buildFallbackStrategy(
             timeRange: `${2 + supports.length * 3}.0s – ${10 + supports.length * 3}.0s`,
             character: carry.name,
             element: carry.element,
-            action: `${carry.name} Main Burst / Combo Window`,
+            action: getCarryWindowAction(carry),
             notes: `Execute full on-field combo while team buffs overlap (${focus}).`,
           },
         ]
       : []),
   ];
 
-  const buffBars = party.slice(1).map((s, idx) => {
+  const buffBars = supports.map((s, idx) => {
     const profile = getSupportProfile(s);
     return {
       name: profile.buffName,

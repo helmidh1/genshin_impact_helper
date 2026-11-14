@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { extractGeminiErrorMessage } from "@/lib/gemini";
+import {
+  askCoachFollowUp,
+  extractGeminiErrorMessage,
+  withTimeout,
+} from "@/lib/gemini";
+import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
+import { createMockCharacter } from "@/lib/test-fixtures";
 
 describe("extractGeminiErrorMessage", () => {
   it("extracts clean message from GoogleGenAI JSON array error body", () => {
@@ -79,5 +85,53 @@ describe("extractGeminiErrorMessage", () => {
     expect(extractGeminiErrorMessage("string error")).toBe(
       "Gemini request failed."
     );
+  });
+});
+
+describe("withTimeout", () => {
+  it("resolves promptly when promise completes before timeout threshold", async () => {
+    const fastPromise = new Promise<string>((resolve) =>
+      setTimeout(() => resolve("fast result"), 10)
+    );
+    const result = await withTimeout(fastPromise, 500, "Fast operation");
+    expect(result).toBe("fast result");
+  });
+
+  it("rejects with operation name and duration when promise stalls past timeout", async () => {
+    const stalledPromise = new Promise<string>((resolve) =>
+      setTimeout(() => resolve("never"), 100)
+    );
+    await expect(
+      withTimeout(stalledPromise, 20, "Gemini strategy generation")
+    ).rejects.toThrow("Gemini strategy generation timed out after 0s.");
+  });
+});
+
+describe("askCoachFollowUp (offline fallback)", () => {
+  it("includes active rotation strategy context when provided in offline fallback mode", async () => {
+    const raiden = createMockCharacter("Raiden Shogun", "Electro", {
+      stats: {
+        maxHp: 20000,
+        atk: 1800,
+        def: 800,
+        em: 50,
+        critRate: 65,
+        critDmg: 140,
+        er: 270,
+      },
+    });
+
+    const reply = await askCoachFollowUp({
+      question: "When should I burst?",
+      party: [raiden],
+      encounter: ENCOUNTER_PRESETS[0],
+      activeStrategyNote: "Raiden National 21s rotation",
+      apiKey: "", // empty forces offline fallback
+    });
+
+    expect(reply.source).toBe("fallback");
+    expect(reply.answer).toContain("Offline coach mode");
+    expect(reply.answer).toContain("Active rotation: Raiden National 21s rotation");
+    expect(reply.answer).toContain("Raiden Shogun (270% ER)");
   });
 });

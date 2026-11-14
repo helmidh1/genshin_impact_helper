@@ -186,6 +186,7 @@ export function CoachTab({
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           mode: "strategy",
           party,
@@ -202,8 +203,17 @@ export function CoachTab({
       }
       onUpdateStrategy(data);
     } catch (err) {
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === "TimeoutError" ||
+          err.name === "AbortError" ||
+          err.message.toLowerCase().includes("timeout"));
       setErrorMsg(
-        err instanceof Error ? err.message : "Failed to run combat analysis."
+        isTimeout
+          ? "Strategy analysis timed out after 30s. Please verify your connection or retry."
+          : err instanceof Error
+          ? err.message
+          : "Failed to run combat analysis."
       );
     } finally {
       setIsGenerating(false);
@@ -221,14 +231,20 @@ export function CoachTab({
     setIsAsking(true);
 
     try {
+      const activeStrategyNote = strategy.teamName
+        ? `Team: ${strategy.teamName} | Duration: ${strategy.rotationDuration} | Note: ${strategy.criticalNote}`
+        : undefined;
+
       const res = await fetch("/api/coach", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(30000),
         body: JSON.stringify({
           mode: "followup",
           question: trimmed,
           party,
           encounter,
+          activeStrategyNote,
           previousInteractionId: strategy.interactionId,
           ...(effectiveApiKey ? { apiKey: effectiveApiKey } : {}),
         }),
@@ -250,9 +266,16 @@ export function CoachTab({
       );
       onUpdateChatMessages([...nextMessages, coachMsg]);
     } catch (err) {
+      const isTimeout =
+        err instanceof Error &&
+        (err.name === "TimeoutError" ||
+          err.name === "AbortError" ||
+          err.message.toLowerCase().includes("timeout"));
       const errMsg = createFollowUpMessage(
         "coach",
-        err instanceof Error
+        isTimeout
+          ? "Coach reply timed out after 30s. Please check your connection or retry."
+          : err instanceof Error
           ? `Error: ${err.message}`
           : "Error reaching Gemini Coach."
       );
