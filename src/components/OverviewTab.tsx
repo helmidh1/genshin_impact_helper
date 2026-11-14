@@ -19,6 +19,7 @@ import {
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
 import { ELEMENT_THEMES } from "@/lib/elements";
+import { calculateResinEta } from "@/lib/directives-engine";
 import type {
   DailyDirectives,
   HoyolabCheckinState,
@@ -110,12 +111,7 @@ export function OverviewTab({
     );
   }, [profile.characters]);
 
-  const resinRemainingMinutes = Math.max(
-    0,
-    (directives.maxResin - directives.resin) * 8
-  );
-  const resinHrs = Math.floor(resinRemainingMinutes / 60);
-  const resinMins = resinRemainingMinutes % 60;
+  const resinEta = calculateResinEta(directives);
 
   const handleExportProfile = () => {
     const blob = new Blob([JSON.stringify(profile, null, 2)], {
@@ -501,18 +497,14 @@ export function OverviewTab({
               <div
                 className="h-full bg-gradient-to-r from-[#00b4d8] to-[#4cd6fb] transition-all"
                 style={{
-                  width: `${Math.round((directives.resin / directives.maxResin) * 100)}%`,
+                  width: `${resinEta.percentage}%`,
                 }}
               />
             </div>
             <div className="flex items-center justify-between text-[11px] font-mono text-[#99907c]">
-              <span>
-                {resinRemainingMinutes === 0
-                  ? "Fully Replenished (Capped)"
-                  : `Full in ~${resinHrs}h ${resinMins}m`}
-              </span>
+              <span>{resinEta.label}</span>
               <span className="text-[10px] text-[#4cd6fb]">
-                {Math.round((directives.resin / directives.maxResin) * 100)}%
+                {resinEta.percentage}%
               </span>
             </div>
           </div>

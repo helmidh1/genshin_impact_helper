@@ -20,6 +20,8 @@
 | `src/lib/build-engine.test.ts` | Unit tests for pure domain theorycraft engine (19 tests via Vitest). |
 | `src/lib/coach-engine.ts` | Pure domain theorycraft engine (rotation sequencing, ER benchmarks, buff timelines, party summarization, fallback equipment advice). Zero I/O, zero AI SDK imports, zero React hooks. |
 | `src/lib/coach-engine.test.ts` | Unit tests for CoachEngine (14 tests via Vitest). |
+| `src/lib/directives-engine.ts` | Pure domain progression engine (monotonic resin recovery, ETA formatting, parametric cooldowns, UTC+8 dates, check-in reward/retcode evaluation). Zero I/O, zero React hooks. |
+| `src/lib/directives-engine.test.ts` | Unit tests for DirectivesEngine (Vitest). |
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, delegating fallback heuristics directly to `CoachEngine`. |

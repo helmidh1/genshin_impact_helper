@@ -246,6 +246,44 @@ export interface DailyDirectives {
   source?: "hoyolab" | "demo" | "synced";
 }
 
+export interface ResinEtaSummary {
+  isCapped: boolean;
+  remainingMinutes: number;
+  hours: number;
+  minutes: number;
+  percentage: number;
+  label: string;
+}
+
+export interface ParametricCooldownParams {
+  obtained?: boolean;
+  reached?: boolean;
+  days?: number;
+  hours?: number;
+  minutes?: number;
+}
+
+export interface RawGeetestData {
+  is_risk?: boolean;
+  gt?: string;
+  challenge?: string;
+  success?: number;
+}
+
+export interface CheckinClassification {
+  status:
+    | "success"
+    | "already_claimed"
+    | "risk_challenge"
+    | "auth_expired"
+    | "not_found"
+    | "rate_limited"
+    | "error";
+  isRiskChallenge: boolean;
+  retcode: number;
+  message?: string;
+}
+
 export interface EncounterPreset {
   id: string;
   name: string;

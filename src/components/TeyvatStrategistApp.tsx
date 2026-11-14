@@ -10,7 +10,7 @@ import { ShowcaseTab } from "@/components/ShowcaseTab";
 import { TopNavBar, type AppTab } from "@/components/TopNavBar";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { ELEMENT_THEMES } from "@/lib/elements";
-import { getHoyolabUtc8Date } from "@/lib/hoyolab-checkin";
+import { getHoyolabUtc8Date } from "@/lib/directives-engine";
 import { profileStore } from "@/lib/profile-store";
 import { useProfileStore } from "@/lib/use-profile-store";
 import type {

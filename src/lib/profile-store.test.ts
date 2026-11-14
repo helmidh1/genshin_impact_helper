@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_DIRECTIVES, DEMO_TRAVELER_PROFILE } from "@/lib/demo-data";
-import {
-  createProfileStore,
-  reconcileResinDirectives,
-} from "@/lib/profile-store";
+import { createProfileStore } from "@/lib/profile-store";
+import { reconcileResin } from "@/lib/directives-engine";
 import { MemoryStorageAdapter } from "@/lib/test-fixtures";
 import type { DailyDirectives, TravelerProfile } from "@/types/genshin";
 
@@ -221,7 +219,7 @@ describe("ProfileStore - Resin Calculations & Active Reconciliation", () => {
 
     // Exactly 16 minutes later (2 resin intervals)
     const sixteenMinsLaterMs = startMs + 16 * 60 * 1000;
-    const reconciled = reconcileResinDirectives(directives, sixteenMinsLaterMs);
+    const reconciled = reconcileResin(directives, sixteenMinsLaterMs);
 
     expect(reconciled.resin).toBe(102);
     expect(reconciled.resinRecoverySeconds).toBe((200 - 102) * 480);
@@ -239,7 +237,7 @@ describe("ProfileStore - Resin Calculations & Active Reconciliation", () => {
 
     // 24 hours later
     const dayLaterMs = startMs + 24 * 60 * 60 * 1000;
-    const reconciled = reconcileResinDirectives(directives, dayLaterMs);
+    const reconciled = reconcileResin(directives, dayLaterMs);
 
     expect(reconciled.resin).toBe(200);
     expect(reconciled.resinRecoverySeconds).toBe(0);

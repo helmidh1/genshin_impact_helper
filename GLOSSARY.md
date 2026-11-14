@@ -12,6 +12,10 @@ _Avoid_: Evaluator, rater, grading service, calculator
 The pure domain theorycraft engine responsible for calculating party rotation sequences, Energy Recharge (ER) thresholds, buff timelines, and equipment advice.
 _Avoid_: AI helper, bot, strategy generator, chat handler
 
+**Directives Engine**:
+The pure domain module responsible for daily progression arithmetic, resin regeneration formulas, countdown and ETA formatting, UTC+8 calendar day logic, and HoYoLAB check-in reward resolution.
+_Avoid_: Timer helper, resin calculator, check-in service, daily manager
+
 **Profile Store**:
 The centralized client-side domain module responsible for local state persistence, schema migration, resin recovery reconciliation, and reactive UI subscriptions.
 _Avoid_: Storage helper, cache manager, local storage wrapper, state manager

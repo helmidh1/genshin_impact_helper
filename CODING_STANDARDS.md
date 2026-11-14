@@ -7,7 +7,8 @@ Rules and conventions enforced during code review (`/code-review`). Reviewer age
 - **Pure Domain Engines**:
   - **Build Engine** (`src/lib/build-engine.ts`): Pure domain logic for Crit Value calculations, roll tiering, stat weight evaluation, archetype detection, build bottleneck critiques, equipment comparison. Unit tests in `src/lib/build-engine.test.ts`.
   - **Coach Engine** (`src/lib/coach-engine.ts`): Pure domain logic for rotation sequencing, Energy Recharge (ER) diagnostic benchmarks, buff timelines, party summarization, and heuristic equipment advice. Unit tests in `src/lib/coach-engine.test.ts`.
-  - Both domain engines must remain pure: zero network I/O, zero filesystem access, zero browser `localStorage` dependencies, zero AI SDK imports, and zero React hooks.
+  - **Directives Engine** (`src/lib/directives-engine.ts`): Pure domain logic for monotonic resin regeneration, countdown/ETA formatting, parametric cooldown resolution, UTC+8 calendar day logic, and HoYoLAB daily check-in reward/retcode evaluation. Unit tests in `src/lib/directives-engine.test.ts`.
+  - All domain engines must remain pure: zero network I/O, zero filesystem access, zero browser `localStorage` dependencies, zero AI SDK imports, and zero React hooks.
 - **Adapter Boundary**: Upstream data adapters (e.g., `src/lib/enka.ts`, `src/lib/hoyolab.ts`) are anti-corruption layers.
   - Adapters must only fetch, validate, and normalize upstream payloads into domain DTOs (`RawArtifactInput`).
   - Adapters must delegate artifact and build evaluation to `evaluateArtifacts()` from `src/lib/build-engine.ts`.

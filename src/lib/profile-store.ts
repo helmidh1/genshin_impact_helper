@@ -1,3 +1,4 @@
+import { reconcileResin } from "@/lib/directives-engine";
 import { DEFAULT_DIRECTIVES, DEMO_TRAVELER_PROFILE } from "@/lib/demo-data";
 import type {
   CoachFollowUpMessage,
@@ -21,54 +22,6 @@ const HOYOLAB_CREDS_KEY = "teyvat_strategist_hoyolab_creds_v1";
 const GEMINI_API_KEY_KEY = "teyvat_strategist_gemini_key_v1";
 const MAX_PROFILES = 8;
 const MAX_CHAT_MESSAGES = 20;
-const RESIN_REGEN_MS = 8 * 60 * 1000;
-const RESIN_REGEN_SECONDS = 480;
-
-export function reconcileResinDirectives(
-  directives: DailyDirectives,
-  nowMs = Date.now()
-): DailyDirectives {
-  const lastMs = Date.parse(directives.lastUpdatedAt);
-  const maxResin = directives.maxResin > 0 ? directives.maxResin : 200;
-  if (!Number.isFinite(lastMs) || directives.resin >= maxResin) {
-    return {
-      ...directives,
-      maxResin,
-      resinRecoverySeconds: 0,
-    };
-  }
-
-  const elapsedMs = Math.max(0, nowMs - lastMs);
-  const gained = Math.floor(elapsedMs / RESIN_REGEN_MS);
-  const nextResin = Math.min(maxResin, directives.resin + gained);
-
-  if (nextResin >= maxResin) {
-    return {
-      ...directives,
-      resin: maxResin,
-      maxResin,
-      resinRecoverySeconds: 0,
-      lastUpdatedAt: new Date(nowMs).toISOString(),
-    };
-  }
-
-  const elapsedInCycleMs = elapsedMs % RESIN_REGEN_MS;
-  const elapsedInCycleSeconds = Math.floor(elapsedInCycleMs / 1000);
-  const secondsToNextPoint = Math.max(0, RESIN_REGEN_SECONDS - elapsedInCycleSeconds);
-  const remainingCyclesAfterNext = Math.max(0, maxResin - nextResin - 1);
-  const totalRecoverySeconds = remainingCyclesAfterNext * RESIN_REGEN_SECONDS + secondsToNextPoint;
-
-  return {
-    ...directives,
-    resin: nextResin,
-    maxResin,
-    resinRecoverySeconds: totalRecoverySeconds,
-    lastUpdatedAt:
-      gained > 0
-        ? new Date(lastMs + gained * RESIN_REGEN_MS).toISOString()
-        : directives.lastUpdatedAt,
-  };
-}
 
 export class BrowserLocalStorageAdapter implements StorageAdapter {
   getItem(key: string): string | null {
@@ -203,7 +156,7 @@ export class ProfileStore {
         const parsed = JSON.parse(rawDirectives) as Record<string, DailyDirectives>;
         if (parsed && typeof parsed === "object") {
           for (const [uid, dir] of Object.entries(parsed)) {
-            directivesByUid[uid] = reconcileResinDirectives(dir);
+            directivesByUid[uid] = reconcileResin(dir);
           }
         }
       } catch {}
@@ -211,7 +164,7 @@ export class ProfileStore {
       try {
         const parsed = JSON.parse(rawGlobalDirectives) as DailyDirectives;
         if (parsed) {
-          directivesByUid[activeUid] = reconcileResinDirectives(parsed);
+          directivesByUid[activeUid] = reconcileResin(parsed);
         }
       } catch {}
     }
@@ -448,7 +401,7 @@ export class ProfileStore {
   reconcileResin(nowMs = Date.now()): void {
     const activeUid = this.state.activeUid;
     const current = this.state.directivesByUid[activeUid] ?? DEFAULT_DIRECTIVES;
-    const reconciled = reconcileResinDirectives(current, nowMs);
+    const reconciled = reconcileResin(current, nowMs);
 
     if (
       reconciled.resin !== current.resin ||

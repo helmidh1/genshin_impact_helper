@@ -2,6 +2,7 @@ import { tallyArtifactSets } from "@/lib/build-engine";
 import type {
   ArtifactPiece,
   ArtifactSlot,
+  DailyDirectives,
   ElementType,
   EncounterPreset,
   ShowcaseCharacter,
@@ -140,6 +141,35 @@ export function createMockEncounter(
     ],
     mechanicsAlert:
       "Vulnerability State: Drops -50% all RES for 20s after defeating ruin minion.",
+    ...overrides,
+  };
+}
+
+export function createMockDirectives(
+  overrides?: Partial<DailyDirectives>
+): DailyDirectives {
+  return {
+    resin: 120,
+    maxResin: 200,
+    resinRecoverySeconds: 38400,
+    condensedResin: 2,
+    realmCurrency: 1800,
+    maxRealmCurrency: 2400,
+    realmCurrencyRecoverySeconds: 12000,
+    weeklyBossDiscountsRemaining: 3,
+    weeklyBossesDone: 0,
+    weeklyBossDiscountLimit: 3,
+    dailyCommissionsDone: 4,
+    totalCommissions: 4,
+    extraRewardClaimed: true,
+    expeditionsCount: 5,
+    maxExpeditions: 5,
+    expeditionsFinished: 5,
+    parametricReady: true,
+    parametricRecoveryText: "Ready to use",
+    customGoals: [],
+    source: "demo",
+    lastUpdatedAt: new Date("2026-03-01T12:00:00Z").toISOString(),
     ...overrides,
   };
 }

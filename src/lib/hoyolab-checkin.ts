@@ -1,18 +1,16 @@
 import { resolveHoyolabAuth, type HoyolabAuthConfig } from "@/lib/hoyolab";
+import {
+  classifyCheckinRetcode,
+  getHoyolabUtc8Date,
+  resolveTodayReward,
+} from "@/lib/directives-engine";
 import type {
+  CheckinClassification,
   HoyolabCheckinAction,
   HoyolabCheckinAward,
   HoyolabCheckinRequest,
   HoyolabCheckinState,
 } from "@/types/genshin";
-
-export function getHoyolabUtc8Date(now = new Date()): string {
-  const utc8 = new Date(now.getTime() + 8 * 60 * 60 * 1000);
-  const year = utc8.getUTCFullYear();
-  const month = String(utc8.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(utc8.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
 
 const GENSHIN_CHECKIN_ACT_ID = "e202102251931481";
 const GENSHIN_CHECKIN_BASE = "https://sg-hk4e-api.hoyolab.com/event/sol";
@@ -115,58 +113,54 @@ async function fetchSolApi<T>(params: {
   return (await res.json()) as HoyolabRawResponse<T>;
 }
 
+function statusToHttpStatus(status: CheckinClassification["status"]): number {
+  switch (status) {
+    case "auth_expired":
+      return 401;
+    case "not_found":
+      return 404;
+    case "rate_limited":
+      return 429;
+    default:
+      return 502;
+  }
+}
+
 function throwIfHoyolabFailure(
-  retcode: number,
-  message: string | undefined,
+  classification: CheckinClassification,
+  upstreamMessage: string | undefined,
   auth: HoyolabAuthConfig
 ): void {
-  if (retcode === 0) return;
+  if (classification.status === "success") return;
 
-  if (retcode === -100 || retcode === 10001 || retcode === -1071) {
+  if (classification.status === "auth_expired") {
     const midHint =
       auth.hasV2Token && !auth.hasMid
         ? " Your token uses v2_ format—make sure you also include ltmid_v2 from hoyolab.com cookies."
         : "";
     throw new HoyolabCheckinError(
       401,
-      `HoYoLAB session cookies are invalid or expired (code ${retcode}).${midHint}`,
-      retcode
+      `${classification.message}${midHint}`,
+      classification.retcode
     );
   }
 
-  if (retcode === -10002) {
+  if (
+    classification.status === "not_found" ||
+    classification.status === "rate_limited"
+  ) {
     throw new HoyolabCheckinError(
-      404,
-      "No Genshin Impact account is bound to these HoYoLAB cookies (code -10002).",
-      retcode
-    );
-  }
-
-  if (retcode === -110 || retcode === 10101 || retcode === 1028) {
-    throw new HoyolabCheckinError(
-      429,
-      "HoYoLAB rate limit reached. Please wait a minute before checking in again.",
-      retcode
+      statusToHttpStatus(classification.status),
+      classification.message ?? "HoYoLAB check-in error.",
+      classification.retcode
     );
   }
 
   throw new HoyolabCheckinError(
     502,
-    `HoYoLAB check-in error (${retcode}): ${message || "Unknown error"}`,
-    retcode
+    `HoYoLAB check-in error (${classification.retcode}): ${upstreamMessage || classification.message || "Unknown error"}`,
+    classification.retcode
   );
-}
-
-function resolveTodayReward(
-  awards: HoyolabCheckinAward[],
-  totalSignDays: number,
-  checkedInToday: boolean
-): HoyolabCheckinAward | undefined {
-  if (awards.length === 0) return undefined;
-  const idx = checkedInToday
-    ? Math.min(awards.length - 1, Math.max(0, totalSignDays - 1))
-    : Math.min(awards.length - 1, Math.max(0, totalSignDays));
-  return awards[idx];
 }
 
 async function fetchCheckinSnapshot(auth: HoyolabAuthConfig, lang: string) {
@@ -184,7 +178,8 @@ async function fetchCheckinSnapshot(auth: HoyolabAuthConfig, lang: string) {
   ]);
 
   const infoCode = Number(infoRes.retcode ?? 0);
-  throwIfHoyolabFailure(infoCode, infoRes.message, auth);
+  const infoClassification = classifyCheckinRetcode(infoCode);
+  throwIfHoyolabFailure(infoClassification, infoRes.message, auth);
 
   const totalSignDays = Number(infoRes.data?.total_sign_day ?? 0);
   const checkedInToday = Boolean(infoRes.data?.is_sign);
@@ -292,8 +287,9 @@ export async function runGenshinCheckinAction(
     auth,
   });
   const signCode = Number(signRes.retcode ?? 0);
+  const classification = classifyCheckinRetcode(signCode, signRes.data);
 
-  if (signCode === -5003) {
+  if (classification.status === "already_claimed") {
     return {
       status: "already_claimed",
       checkedInToday: true,
@@ -307,20 +303,13 @@ export async function runGenshinCheckinAction(
         true
       ),
       awards: snapshot.awards,
-      message: "Already checked in for today.",
+      message: classification.message ?? "Already checked in for today.",
       checkedAt: new Date().toISOString(),
       accountTag,
     };
   }
 
-  throwIfHoyolabFailure(signCode, signRes.message, auth);
-
-  const isRiskChallenge =
-    Boolean(signRes.data?.is_risk) ||
-    Boolean(signRes.data?.gt) ||
-    Number(signRes.data?.success ?? 0) === 1;
-
-  if (isRiskChallenge) {
+  if (classification.status === "risk_challenge") {
     return {
       status: "risk_challenge",
       checkedInToday: false,
@@ -335,11 +324,14 @@ export async function runGenshinCheckinAction(
       ),
       awards: snapshot.awards,
       message:
+        classification.message ??
         "HoYoLAB requested human verification (CAPTCHA). Claim once on act.hoyolab.com, then click Manual Check-In to refresh.",
       checkedAt: new Date().toISOString(),
       accountTag,
     };
   }
+
+  throwIfHoyolabFailure(classification, signRes.message, auth);
 
   // Refresh /info best-effort so streak count matches HoYoLAB server state
   let finalDays = snapshot.checkedInToday

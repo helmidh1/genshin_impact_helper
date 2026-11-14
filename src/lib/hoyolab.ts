@@ -1,5 +1,6 @@
 import { createHash, randomInt } from "node:crypto";
 import { evaluateArtifacts, round1 } from "@/lib/build-engine";
+import { formatParametricCooldown } from "@/lib/directives-engine";
 import type {
   ArtifactSlot,
   CharacterStats,
@@ -927,25 +928,13 @@ export async function fetchHoyolabProfile(
       (e) => e.status === "Finished" || e.remained_time === "0"
     ).length;
 
-    let parametricText: string | undefined;
-    if (n.transformer?.obtained) {
-      if (n.transformer.recovery_time?.reached) {
-        parametricText = "Ready to use";
-      } else {
-        const d = n.transformer.recovery_time?.Day ?? 0;
-        const h = n.transformer.recovery_time?.Hour ?? 0;
-        const m = n.transformer.recovery_time?.Minute ?? 0;
-        if (d > 0) {
-          parametricText = `${d}d ${h}h cooldown`;
-        } else if (h > 0) {
-          parametricText = `${h}h ${m}m cooldown`;
-        } else {
-          parametricText = "Cooldown active";
-        }
-      }
-    } else if (n.transformer?.obtained === false) {
-      parametricText = "Not unlocked";
-    }
+    const parametricInfo = formatParametricCooldown({
+      obtained: n.transformer?.obtained,
+      reached: n.transformer?.recovery_time?.reached,
+      days: n.transformer?.recovery_time?.Day,
+      hours: n.transformer?.recovery_time?.Hour,
+      minutes: n.transformer?.recovery_time?.Minute,
+    });
 
     liveDirectives = {
       ...(n.current_resin !== undefined ? { resin: Number(n.current_resin) } : {}),
@@ -986,8 +975,8 @@ export async function fetchHoyolabProfile(
       expeditionsFinished: finishedExpeditions,
       ...(n.transformer?.obtained !== undefined
         ? {
-            parametricReady: Boolean(n.transformer.recovery_time?.reached),
-            ...(parametricText ? { parametricRecoveryText: parametricText } : {}),
+            parametricReady: parametricInfo.ready,
+            parametricRecoveryText: parametricInfo.label,
           }
         : {}),
       source: "hoyolab",
