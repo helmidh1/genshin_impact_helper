@@ -18,9 +18,11 @@
 | `src/components/` | Client UI components (`TeyvatStrategistApp.tsx` root state shell, `TopNavBar.tsx`, `OverviewTab.tsx`, `ShowcaseTab.tsx`, `CoachTab.tsx`, `ElementBadge.tsx`). |
 | `src/lib/build-engine.ts` | Pure domain theorycraft engine (CV calculation, roll tiering, stat weight evaluation, archetype detection, build bottleneck critiques, equipment comparison). Zero I/O. |
 | `src/lib/build-engine.test.ts` | Unit tests for pure domain theorycraft engine (19 tests via Vitest). |
+| `src/lib/coach-engine.ts` | Pure domain theorycraft engine (rotation sequencing, ER benchmarks, buff timelines, party summarization, fallback equipment advice). Zero I/O, zero AI SDK imports, zero React hooks. |
+| `src/lib/coach-engine.test.ts` | Unit tests for CoachEngine (14 tests via Vitest). |
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
-| `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API client (`generateCoachStrategy`, `askCoachFollowUp`), JSON schema enforcement, and deterministic local heuristics fallback (`buildFallbackStrategy`). |
+| `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, delegating fallback heuristics directly to `CoachEngine`. |
 | `src/lib/profile-store.ts` | Reactive client-side `ProfileStore` (`teyvat_strategist_store_v2`) with `useSyncExternalStore`, intent actions, resin recovery reconciliation, and legacy `_v1` migration. |
 | `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore` and resin reconciliation (14 tests via Vitest). |
 | `src/lib/demo-data.ts` | Built-in demo traveler profile (`DEMO_TRAVELER_PROFILE`), default daily directives (`DEFAULT_DIRECTIVES`), and encounter/boss presets (`ENCOUNTER_PRESETS`). |
