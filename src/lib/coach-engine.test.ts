@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFallbackEquipmentAdvice,
+  buildFallbackFollowUpAnswer,
   buildFallbackStrategy,
   recommendedErFor,
   summarizeParty,
@@ -445,5 +446,33 @@ describe("CoachEngine: Fallback Equipment Advice", () => {
 
     expect(advice.characterName).toBe("Raiden Shogun");
     expect(advice.weaponAdvice).toContain("Engulfing Lightning");
+  });
+});
+
+describe("CoachEngine: Follow-Up Offline Synthesis", () => {
+  it("formats fallback follow-up answer with custom prefix, roster ER, and encounter", () => {
+    const kazuha = createMockCharacter("Kaedehara Kazuha", "Anemo", {
+      stats: {
+        maxHp: 19000,
+        atk: 1400,
+        def: 800,
+        em: 950,
+        critRate: 35,
+        critDmg: 90,
+        er: 165,
+      },
+    });
+
+    const reply = buildFallbackFollowUpAnswer({
+      question: "How should I double swirl?",
+      party: [kazuha],
+      encounter: mockEncounter,
+      activeStrategyNote: "Vaporize 20s",
+      prefix: "Offline heuristic coach",
+    });
+
+    expect(reply).toContain("Offline heuristic coach: For \"How should I double swirl?\" (Active rotation: Vaporize 20s)");
+    expect(reply).toContain("Kaedehara Kazuha (165% ER)");
+    expect(reply).toContain(mockEncounter.name);
   });
 });

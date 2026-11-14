@@ -20,6 +20,21 @@ import type {
  * Guaranteed zero-I/O, zero AI SDK dependencies, zero React hooks.
  */
 
+export function buildFallbackFollowUpAnswer(params: {
+  question: string;
+  party: ShowcaseCharacter[];
+  encounter: EncounterPreset;
+  activeStrategyNote?: string;
+  prefix?: string;
+}): string {
+  const names = params.party.map((c) => `${c.name} (${c.stats.er}% ER)`).join(", ");
+  const rotationSnippet = params.activeStrategyNote
+    ? ` (Active rotation: ${params.activeStrategyNote})`
+    : "";
+  const header = params.prefix ?? "Offline coach mode (no Gemini API key configured)";
+  return `${header}: For "${params.question}"${rotationSnippet}, review your active roster (${names}) against ${params.encounter.name}. Ensure your highest-cost off-field bursts meet their ER breakpoints first, swirl your carry element before Bennett/support fields expire, and save burst windows for ${params.encounter.name}'s vulnerability phase.`;
+}
+
 export function summarizeParty(party: ShowcaseCharacter[]): string {
   return party
     .map((c, idx) => {

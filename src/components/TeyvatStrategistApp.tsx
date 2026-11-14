@@ -14,6 +14,7 @@ import { getHoyolabUtc8Date } from "@/lib/directives-engine";
 import {
   getActiveProfile,
   getCoachChat,
+  getCoachEngineMode,
   getCoachStrategy,
   getDirectives,
   getParty,
@@ -22,6 +23,7 @@ import {
 import { useProfileStore } from "@/lib/use-profile-store";
 import { useHasMounted } from "@/lib/use-has-mounted";
 import type {
+  CoachEngineMode,
   CoachFollowUpMessage,
   CoachStrategyResponse,
   DailyDirectives,
@@ -194,6 +196,7 @@ export function TeyvatStrategistApp() {
     getCoachStrategy(storeState) ??
     createInitialPreviewStrategy(activeProfile.characters);
   const chatMessages = getCoachChat(storeState);
+  const coachEngineMode = getCoachEngineMode(storeState);
   const savedProfiles = storeState.profiles;
   const checkinState = storeState.checkinState;
 
@@ -469,6 +472,10 @@ export function TeyvatStrategistApp() {
     profileStore.setCoachChat(activeProfile.uid, next);
   };
 
+  const handleUpdateEngineMode = (next: CoachEngineMode) => {
+    profileStore.setCoachEngineMode(next);
+  };
+
   if (!hasMounted) {
     return <TeyvatSkeletonShell />;
   }
@@ -553,6 +560,8 @@ export function TeyvatStrategistApp() {
             onUpdateStrategy={handleUpdateStrategy}
             chatMessages={chatMessages}
             onUpdateChatMessages={handleUpdateChat}
+            engineMode={coachEngineMode}
+            onChangeEngineMode={handleUpdateEngineMode}
           />
         )}
       </main>

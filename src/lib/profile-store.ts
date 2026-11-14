@@ -1,6 +1,7 @@
 import { reconcileResin } from "@/lib/directives-engine";
 import { DEFAULT_DIRECTIVES, DEMO_TRAVELER_PROFILE } from "@/lib/demo-data";
 import type {
+  CoachEngineMode,
   CoachFollowUpMessage,
   CoachStrategyResponse,
   DailyDirectives,
@@ -67,6 +68,7 @@ export function createDefaultState(): ProfileState {
     },
     coachStrategyByUid: {},
     coachChatByUid: {},
+    coachEngineMode: "gemini",
     checkinState: null,
     equipmentAdviceByChar: {},
   };
@@ -512,6 +514,19 @@ export class ProfileStore {
   getCoachChat(uid?: string): CoachFollowUpMessage[] {
     return getCoachChat(this.state, uid);
   }
+
+  setCoachEngineMode(mode: CoachEngineMode): void {
+    this.state = {
+      ...this.state,
+      coachEngineMode: mode,
+    };
+    this.persist();
+    this.notify();
+  }
+
+  getCoachEngineMode(): CoachEngineMode {
+    return getCoachEngineMode(this.state);
+  }
 }
 
 // Pure Domain Queries on ProfileState (safe for SSR, hydration snapshots, and React components)
@@ -555,6 +570,10 @@ export function getCoachChat(
 ): CoachFollowUpMessage[] {
   const targetUid = uid ?? state.activeUid;
   return state.coachChatByUid[targetUid] ?? [];
+}
+
+export function getCoachEngineMode(state: ProfileState): CoachEngineMode {
+  return state.coachEngineMode ?? "gemini";
 }
 
 export function createProfileStore(

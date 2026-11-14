@@ -4,6 +4,7 @@ import {
   createProfileStore,
   getActiveProfile,
   getCoachChat,
+  getCoachEngineMode,
   getCoachStrategy,
   getDirectives,
   getParty,
@@ -381,5 +382,23 @@ describe("ProfileStore - Legacy V1 Migration", () => {
 
     const chat = getCoachChat(SERVER_SNAPSHOT);
     expect(chat).toEqual([]);
+
+    const engineMode = getCoachEngineMode(SERVER_SNAPSHOT);
+    expect(engineMode).toBe("gemini");
+  });
+
+  it("manages and persists coachEngineMode updates", () => {
+    const adapter = new MemoryStorageAdapter();
+    const store = createProfileStore(adapter);
+
+    expect(store.getCoachEngineMode()).toBe("gemini");
+
+    store.setCoachEngineMode("heuristic");
+    expect(store.getCoachEngineMode()).toBe("heuristic");
+    expect(store.getState().coachEngineMode).toBe("heuristic");
+
+    // Fresh store instance with same storage retains the setting
+    const reloaded = createProfileStore(adapter);
+    expect(reloaded.getCoachEngineMode()).toBe("heuristic");
   });
 });

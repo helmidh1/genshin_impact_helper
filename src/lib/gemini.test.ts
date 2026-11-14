@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   askCoachFollowUp,
   extractGeminiErrorMessage,
+  generateCoachStrategy,
   withTimeout,
 } from "@/lib/gemini";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
@@ -133,5 +134,35 @@ describe("askCoachFollowUp (offline fallback)", () => {
     expect(reply.answer).toContain("Offline coach mode");
     expect(reply.answer).toContain("Active rotation: Raiden National 21s rotation");
     expect(reply.answer).toContain("Raiden Shogun (270% ER)");
+  });
+});
+
+describe("Coach Engine Mode Routing", () => {
+  it("forces local heuristic fallback when engineMode is 'heuristic' even with an apiKey provided", async () => {
+    const xiangling = createMockCharacter("Xiangling", "Pyro");
+    const strategy = await generateCoachStrategy({
+      party: [xiangling],
+      encounter: ENCOUNTER_PRESETS[0],
+      focus: "Optimal Rotation",
+      apiKey: "dummy-key-that-would-fail-if-called",
+      engineMode: "heuristic",
+    });
+
+    expect(strategy.source).toBe("fallback");
+    expect(strategy.note).toContain("Generated via Local Heuristics Engine.");
+  });
+
+  it("routes follow-up chat to offline heuristic advisor when engineMode is 'heuristic'", async () => {
+    const bennett = createMockCharacter("Bennett", "Pyro");
+    const reply = await askCoachFollowUp({
+      question: "How much ER does Bennett need?",
+      party: [bennett],
+      encounter: ENCOUNTER_PRESETS[0],
+      apiKey: "dummy-key",
+      engineMode: "heuristic",
+    });
+
+    expect(reply.source).toBe("fallback");
+    expect(reply.answer).toContain("Offline heuristic coach");
   });
 });

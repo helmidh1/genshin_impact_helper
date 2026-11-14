@@ -1,12 +1,14 @@
 import { GoogleGenAI } from "@google/genai";
 import {
   buildFallbackEquipmentAdvice,
+  buildFallbackFollowUpAnswer,
   buildFallbackStrategy,
   summarizeParty,
 } from "@/lib/coach-engine";
 import { getEquipmentGuide } from "@/lib/equipment-data";
 import { computeResonances } from "@/lib/elements";
 import type {
+  CoachEngineMode,
   CoachStrategyResponse,
   CoachingFocus,
   EncounterPreset,
@@ -194,8 +196,18 @@ export async function generateCoachStrategy(params: {
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
   focus: CoachingFocus;
+  engineMode?: CoachEngineMode;
   apiKey?: string;
 }): Promise<CoachStrategyResponse> {
+  if (params.engineMode === "heuristic") {
+    return buildFallbackStrategy(
+      params.party,
+      params.encounter,
+      params.focus,
+      "Generated via Local Heuristics Engine."
+    );
+  }
+
   const apiKey = params.apiKey?.trim() || process.env.GEMINI_API_KEY?.trim();
   if (!apiKey) {
     return buildFallbackStrategy(params.party, params.encounter, params.focus);
@@ -263,18 +275,28 @@ export async function askCoachFollowUp(params: {
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
   activeStrategyNote?: string;
+  engineMode?: CoachEngineMode;
   previousInteractionId?: string;
   apiKey?: string;
 }): Promise<{ answer: string; interactionId?: string; source: "gemini" | "fallback" }> {
-  const apiKey = params.apiKey?.trim() || process.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) {
-    const names = params.party.map((c) => `${c.name} (${c.stats.er}% ER)`).join(", ");
-    const rotationSnippet = params.activeStrategyNote
-      ? ` (Active rotation: ${params.activeStrategyNote})`
-      : "";
+  if (params.engineMode === "heuristic") {
     return {
       source: "fallback",
-      answer: `Offline coach mode (no Gemini API key configured): For "${params.question}"${rotationSnippet}, review your active roster (${names}) against ${params.encounter.name}. Ensure your highest-cost off-field bursts meet their ER breakpoints first, swirl your carry element before Bennett/support fields expire, and save burst windows for ${params.encounter.name}'s vulnerability phase.`,
+      answer: buildFallbackFollowUpAnswer({
+        ...params,
+        prefix: "Offline heuristic coach",
+      }),
+    };
+  }
+
+  const apiKey = params.apiKey?.trim() || process.env.GEMINI_API_KEY?.trim();
+  if (!apiKey) {
+    return {
+      source: "fallback",
+      answer: buildFallbackFollowUpAnswer({
+        ...params,
+        prefix: "Offline coach mode (no Gemini API key configured)",
+      }),
     };
   }
 

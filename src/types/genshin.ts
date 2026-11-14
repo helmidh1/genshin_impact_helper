@@ -300,6 +300,8 @@ export type CoachingFocus =
   | "Combo Mechanics"
   | "Gear Priority";
 
+export type CoachEngineMode = "gemini" | "heuristic";
+
 export interface RotationStep {
   step: number;
   timeRange: string;
@@ -454,6 +456,7 @@ export interface ProfileState {
   partyByUid: Record<string, string[]>;
   coachStrategyByUid: Record<string, CoachStrategyResponse | null>;
   coachChatByUid: Record<string, CoachFollowUpMessage[]>;
+  coachEngineMode?: CoachEngineMode;
   checkinState: HoyolabCheckinState | null;
   equipmentAdviceByChar: Record<string, EquipmentCoachQueryResponse>;
 }

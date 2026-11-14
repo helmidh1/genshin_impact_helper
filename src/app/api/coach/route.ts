@@ -6,6 +6,7 @@ import {
   hasEnvGeminiKey,
 } from "@/lib/gemini";
 import type {
+  CoachEngineMode,
   CoachingFocus,
   EncounterPreset,
   ShowcaseCharacter,
@@ -16,6 +17,7 @@ interface StrategyRequestBody {
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
   focus: CoachingFocus;
+  engineMode?: CoachEngineMode;
   apiKey?: string;
 }
 
@@ -25,6 +27,7 @@ interface FollowUpRequestBody {
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
   activeStrategyNote?: string;
+  engineMode?: CoachEngineMode;
   previousInteractionId?: string;
   apiKey?: string;
 }
@@ -97,6 +100,7 @@ export async function POST(request: NextRequest) {
         party: body.party,
         encounter: body.encounter,
         activeStrategyNote: body.activeStrategyNote,
+        engineMode: body.engineMode,
         previousInteractionId: body.previousInteractionId,
         apiKey: body.apiKey,
       });
@@ -107,6 +111,7 @@ export async function POST(request: NextRequest) {
       party: body.party,
       encounter: body.encounter,
       focus: body.focus,
+      engineMode: body.engineMode,
       apiKey: body.apiKey,
     });
     return Response.json(strategy, { status: 200 });
