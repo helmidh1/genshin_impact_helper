@@ -700,6 +700,7 @@ function parseHoyolabCharacter(
     avatarId,
     name,
     element,
+    rarity: Number(base.rarity ?? 5) === 4 ? 4 : 5,
     level,
     maxLevel,
     constellation,

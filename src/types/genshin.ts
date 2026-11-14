@@ -118,6 +118,7 @@ export interface ShowcaseCharacter {
   name: string;
   title?: string;
   element: ElementType;
+  rarity?: number;
   level: number;
   maxLevel: number;
   constellation: number;

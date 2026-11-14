@@ -14,6 +14,7 @@ export interface EnkaStoreCharacter {
   SideIconName?: string;
   SkillOrder?: number[];
   ProudMap?: Record<string, number>;
+  QualityType?: string;
 }
 
 interface EnkaStoreAffix {
@@ -351,6 +352,7 @@ function parseCharacter(raw: any, meta: EnkaMetadataCache): ShowcaseCharacter {
     avatarId,
     name,
     element,
+    rarity: storeChar?.QualityType === "QUALITY_PURPLE" ? 4 : 5,
     level,
     maxLevel,
     constellation,

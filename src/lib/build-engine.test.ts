@@ -11,6 +11,10 @@ import {
   tallyArtifactSets,
   type RawArtifactInput,
 } from "./build-engine";
+import {
+  detectCharacterRarity,
+  detectWeaponType,
+} from "@/lib/equipment-data";
 import type {
   CharacterEquipmentGuide,
   CharacterStats,
@@ -514,5 +518,46 @@ describe("build-engine: compareEquippedWithRecommendations", () => {
     expect(comparison.mainStatsStatus.sands).toBe("suboptimal");
     expect(comparison.mainStatsStatus.goblet).toBe("optimal");
     expect(comparison.mainStatsStatus.circlet).toBe("acceptable");
+  });
+});
+
+describe("equipment-data: Weapon Type and Character Rarity Detection", () => {
+  it("detects weapon types correctly", () => {
+    const kazuha = createMockCharacter("Kaedehara Kazuha", "Anemo");
+    expect(detectWeaponType(kazuha)).toBe("Sword");
+
+    const yelan = createMockCharacter("Yelan", "Hydro", {
+      weapon: createMockWeapon("Aqua Simulacra"),
+    });
+    expect(detectWeaponType(yelan)).toBe("Bow");
+
+    const zhongli = createMockCharacter("Zhongli", "Geo", {
+      weapon: createMockWeapon("Staff of Homa"),
+    });
+    expect(detectWeaponType(zhongli)).toBe("Polearm");
+
+    const navia = createMockCharacter("Navia", "Geo", {
+      weapon: createMockWeapon("Verdict"),
+    });
+    expect(detectWeaponType(navia)).toBe("Claymore");
+
+    const nahida = createMockCharacter("Nahida", "Dendro", {
+      weapon: createMockWeapon("A Thousand Floating Dreams"),
+    });
+    expect(detectWeaponType(nahida)).toBe("Catalyst");
+  });
+
+  it("detects character rarity correctly (4★ vs 5★)", () => {
+    const bennett = createMockCharacter("Bennett", "Pyro");
+    expect(detectCharacterRarity(bennett)).toBe(4);
+
+    const xiangling = createMockCharacter("Xiangling", "Pyro");
+    expect(detectCharacterRarity(xiangling)).toBe(4);
+
+    const furina = createMockCharacter("Furina", "Hydro");
+    expect(detectCharacterRarity(furina)).toBe(5);
+
+    const explicitChar = createMockCharacter("Custom Char", "Anemo", { rarity: 4 });
+    expect(detectCharacterRarity(explicitChar)).toBe(4);
   });
 });

@@ -1950,6 +1950,71 @@ export function detectWeaponType(
   return charKnownMap[norm] ?? charKnownMap[character.name] ?? "Sword";
 }
 
+const KNOWN_FOUR_STAR_CHARACTERS = new Set([
+  "Amber",
+  "Kaeya",
+  "Lisa",
+  "Barbara",
+  "Razor",
+  "Xiangling",
+  "Beidou",
+  "Xingqiu",
+  "Ningguang",
+  "Fischl",
+  "Bennett",
+  "Noelle",
+  "Chongyun",
+  "Sucrose",
+  "Diona",
+  "Xinyan",
+  "Rosaria",
+  "Yanfei",
+  "Sayu",
+  "Kujou Sara",
+  "Sara",
+  "Thoma",
+  "Gorou",
+  "Yun Jin",
+  "Yunjin",
+  "Kuki Shinobu",
+  "Shinobu",
+  "Shikanoin Heizou",
+  "Heizou",
+  "Collei",
+  "Dori",
+  "Candace",
+  "Layla",
+  "Faruzan",
+  "Yaoyao",
+  "Mika",
+  "Kaveh",
+  "Kirara",
+  "Lynette",
+  "Freminet",
+  "Charlotte",
+  "Chevreuse",
+  "Gaming",
+  "Sethos",
+  "Kachina",
+  "Ororon",
+  "Lan Yan",
+  "Iansan",
+]);
+
+export function detectCharacterRarity(character: ShowcaseCharacter): 4 | 5 {
+  if (character.rarity === 4 || character.rarity === 5) {
+    return character.rarity;
+  }
+  const norm = normalizeCharacterName(character.name);
+  if (
+    KNOWN_FOUR_STAR_CHARACTERS.has(character.name) ||
+    KNOWN_FOUR_STAR_CHARACTERS.has(norm)
+  ) {
+    return 4;
+  }
+  return 5;
+}
+
 export function generateDynamicEquipmentGuide(
   character: ShowcaseCharacter
 ): CharacterEquipmentGuide {
