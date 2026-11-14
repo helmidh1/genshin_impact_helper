@@ -21,3 +21,7 @@ Canonical triage roles (needs-triage, needs-info, ready-for-agent, ready-for-hum
 ### Domain docs
 
 Single-context (`GLOSSARY.md` + `docs/adr/` at repo root). See `docs/agents/domain.md`.
+
+### Coding standards
+
+Enforced during `/code-review` (`CODING_STANDARDS.md` at repo root).
