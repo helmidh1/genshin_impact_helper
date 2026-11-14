@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  CRYSTALFLY_TRAP_DURATION_MS,
   calculateResinEta,
   classifyCheckinRetcode,
+  formatCrystalflyTrapCooldown,
   formatParametricCooldown,
   getHoyolabUtc8Date,
   reconcileResin,
@@ -128,6 +130,84 @@ describe("DirectivesEngine: Parametric Transformer Formatting", () => {
       ready: false,
       label: "Cooldown active",
     });
+  });
+});
+
+describe("DirectivesEngine: Crystalfly Trap Formatting", () => {
+  it("returns ready to deploy when no deployment timestamp is present", () => {
+    expect(formatCrystalflyTrapCooldown(null)).toEqual({
+      ready: true,
+      label: "Ready to deploy",
+      remainingMs: 0,
+    });
+    expect(formatCrystalflyTrapCooldown(undefined)).toEqual({
+      ready: true,
+      label: "Ready to deploy",
+      remainingMs: 0,
+    });
+    expect(formatCrystalflyTrapCooldown("invalid-date")).toEqual({
+      ready: true,
+      label: "Ready to deploy",
+      remainingMs: 0,
+    });
+  });
+
+  it("formats immediate 7d cooldown upon deployment", () => {
+    const now = new Date("2026-03-01T12:00:00Z");
+    const result = formatCrystalflyTrapCooldown(now.toISOString(), now);
+    expect(result.ready).toBe(false);
+    expect(result.label).toBe("7d 0h cooldown");
+    expect(result.remainingMs).toBe(CRYSTALFLY_TRAP_DURATION_MS);
+  });
+
+  it("calculates remaining days and hours accurately", () => {
+    const deployed = new Date("2026-03-01T12:00:00Z");
+    // 2 days and 4 hours elapsed -> 4 days and 20 hours remaining
+    const now = new Date(deployed.getTime() + (2 * 24 + 4) * 60 * 60 * 1000);
+    const result = formatCrystalflyTrapCooldown(deployed.toISOString(), now);
+
+    expect(result.ready).toBe(false);
+    expect(result.label).toBe("4d 20h cooldown");
+  });
+
+  it("calculates remaining hours and minutes under 24 hours", () => {
+    const deployed = new Date("2026-03-01T12:00:00Z");
+    // 6 days and 20 hours elapsed -> 4 hours remaining
+    const now = new Date(deployed.getTime() + (6 * 24 + 20) * 60 * 60 * 1000);
+    const result = formatCrystalflyTrapCooldown(deployed.toISOString(), now);
+
+    expect(result.ready).toBe(false);
+    expect(result.label).toBe("4h 0m cooldown");
+  });
+
+  it("calculates remaining minutes under 1 hour", () => {
+    const deployed = new Date("2026-03-01T12:00:00Z");
+    // 6 days, 23 hours, 20 minutes elapsed -> 40 minutes remaining
+    const now = new Date(deployed.getTime() + (6 * 24 * 60 + 23 * 60 + 20) * 60 * 1000);
+    const result = formatCrystalflyTrapCooldown(deployed.toISOString(), now);
+
+    expect(result.ready).toBe(false);
+    expect(result.label).toBe("40m cooldown");
+  });
+
+  it("returns ready to collect when full 7 days have elapsed", () => {
+    const deployed = new Date("2026-03-01T12:00:00Z");
+    const now = new Date(deployed.getTime() + CRYSTALFLY_TRAP_DURATION_MS);
+    const result = formatCrystalflyTrapCooldown(deployed.toISOString(), now);
+
+    expect(result.ready).toBe(true);
+    expect(result.label).toBe("Ready to collect (15 Cores)");
+    expect(result.remainingMs).toBe(0);
+  });
+
+  it("returns ready to collect when more than 7 days have elapsed", () => {
+    const deployed = new Date("2026-03-01T12:00:00Z");
+    const now = new Date(deployed.getTime() + CRYSTALFLY_TRAP_DURATION_MS + 3600_000);
+    const result = formatCrystalflyTrapCooldown(deployed.toISOString(), now);
+
+    expect(result.ready).toBe(true);
+    expect(result.label).toBe("Ready to collect (15 Cores)");
+    expect(result.remainingMs).toBe(0);
   });
 });
 

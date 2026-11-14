@@ -1,5 +1,6 @@
 import type {
   CheckinClassification,
+  CrystalflyTrapStatus,
   DailyDirectives,
   HoyolabCheckinAward,
   ParametricCooldownParams,
@@ -9,9 +10,11 @@ import type {
 
 export const RESIN_REGEN_SECONDS = 480; // 8 minutes
 export const RESIN_REGEN_MS = RESIN_REGEN_SECONDS * 1000;
+export const CRYSTALFLY_TRAP_DURATION_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (168 hours)
 
 export type {
   CheckinClassification,
+  CrystalflyTrapStatus,
   ParametricCooldownParams,
   RawGeetestData,
   ResinEtaSummary,
@@ -125,6 +128,54 @@ export function formatParametricCooldown(
   }
 
   return { ready: false, label: "Cooldown active" };
+}
+
+export function formatCrystalflyTrapCooldown(
+  deployedAt?: string | null,
+  now = new Date()
+): CrystalflyTrapStatus {
+  if (!deployedAt) {
+    return { ready: true, label: "Ready to deploy", remainingMs: 0 };
+  }
+
+  const deployedTime = new Date(deployedAt).getTime();
+  if (isNaN(deployedTime)) {
+    return { ready: true, label: "Ready to deploy", remainingMs: 0 };
+  }
+
+  const elapsedMs = now.getTime() - deployedTime;
+  const remainingMs = Math.max(0, CRYSTALFLY_TRAP_DURATION_MS - elapsedMs);
+
+  if (remainingMs === 0) {
+    return { ready: true, label: "Ready to collect (15 Cores)", remainingMs: 0 };
+  }
+
+  const totalMinutes = Math.ceil(remainingMs / (60 * 1000));
+  const days = Math.floor(totalMinutes / (24 * 60));
+  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
+  const minutes = totalMinutes % 60;
+
+  if (days > 0) {
+    return {
+      ready: false,
+      label: `${days}d ${hours}h cooldown`,
+      remainingMs,
+    };
+  }
+
+  if (hours > 0) {
+    return {
+      ready: false,
+      label: `${hours}h ${minutes}m cooldown`,
+      remainingMs,
+    };
+  }
+
+  return {
+    ready: false,
+    label: `${minutes}m cooldown`,
+    remainingMs,
+  };
 }
 
 export function getHoyolabUtc8Date(now = new Date()): string {

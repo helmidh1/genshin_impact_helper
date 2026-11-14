@@ -5,6 +5,8 @@ import {
   ArrowDown,
   ArrowUp,
   BrainCircuit,
+  ChevronDown,
+  ChevronUp,
   Heart,
   Search,
   Shield,
@@ -76,6 +78,7 @@ export function ShowcaseTab({
   const [sortBy, setSortBy] = useState<SortOption>("cv");
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [viewMode, setViewMode] = useState<"artifacts" | "equipment">("artifacts");
+  const [isSelectorCollapsed, setIsSelectorCollapsed] = useState(false);
 
   // Keep responsive local selection state synchronized with parent selectedAvatarId prop
   const [prevPropId, setPrevPropId] = useState<number>(selectedAvatarId);
@@ -270,216 +273,284 @@ export function ShowcaseTab({
 
   return (
     <div className="space-y-6">
-      {/* Horizontal Character Selector Strip with Filter Bar — Sticky & Floating on Scroll */}
-      <div className="sticky top-14 z-30 glass-panel rounded-xl p-3 space-y-2.5 bg-[#131a2a]/95 backdrop-blur-xl border border-white/12 shadow-[0_12px_32px_rgba(0,0,0,0.65)]">
-        <div className="flex flex-col gap-2">
-          {/* Top Controls Row: Search Input + Weapon Type Select + Rarity Toggle + Sort By Select + Reset */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Search Input strictly for character names */}
-            <div className="relative flex-1 min-w-[200px] max-w-xs">
-              <Search className="w-3.5 h-3.5 text-[#99907c] absolute left-2.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search characters by name..."
-                className="w-full bg-[#0a0e18]/80 border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#99907c] hover:text-[#dfe2f1] cursor-pointer"
-                  title="Clear search"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              )}
-            </div>
-
-            {/* Weapon Type Filter */}
-            <div className="flex items-center">
-              <select
-                value={weaponTypeFilter}
-                onChange={(e) => setWeaponTypeFilter(e.target.value as WeaponTypeFilter)}
-                className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
-                title="Filter by weapon type"
-              >
-                {WEAPON_TYPE_FILTERS.map((w) => (
-                  <option key={w.value} value={w.value}>
-                    {w.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Rarity Filter */}
-            <div className="flex items-center gap-1 bg-[#0a0e18]/70 p-0.5 rounded-lg border border-white/10">
-              {(["All", 5, 4] as const).map((r) => {
-                const active = rarityFilter === r;
-                return (
-                  <button
-                    key={String(r)}
-                    type="button"
-                    onClick={() => setRarityFilter(r)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
-                      active
-                        ? "bg-[#262a35] border border-[#d4af37]/50 text-[#f2ca50] font-bold"
-                        : "text-[#99907c] hover:text-[#dfe2f1]"
-                    }`}
-                  >
-                    {r === "All" ? "All Stars" : `${r}★`}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Sort Selector & Direction Toggle */}
-            <div className="flex items-center gap-1.5">
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
-                title="Sort metric"
-              >
-                {SORT_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    Sort: {opt.label}
-                  </option>
-                ))}
-              </select>
-
+      {/* Horizontal Character Selector Strip with Filter Bar — Sticky with Animated Slide-Up / Slide-Down */}
+      <div className="sticky top-14 z-30 glass-panel rounded-xl bg-[#131a2a]/95 backdrop-blur-xl border border-white/12 shadow-[0_12px_32px_rgba(0,0,0,0.65)] overflow-hidden transition-all duration-300 ease-in-out">
+        {/* Collapsed Sticky Bar — Always accessible when hidden */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+            isSelectorCollapsed
+              ? "grid-rows-[1fr] opacity-100"
+              : "grid-rows-[0fr] opacity-0 pointer-events-none"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="flex items-center justify-between px-3.5 py-2">
               <button
                 type="button"
-                onClick={() =>
-                  setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
-                }
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer ${
-                  sortDirection === "asc"
-                    ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-semibold"
-                    : "bg-[#0a0e18]/80 border-white/15 text-[#dfe2f1] hover:border-white/30"
-                }`}
-                title={
-                  sortBy === "name"
-                    ? sortDirection === "asc"
-                      ? "Order: Z to A (click for A to Z)"
-                      : "Order: A to Z (click for Z to A)"
-                    : sortDirection === "asc"
-                    ? "Order: Low to High (click for High to Low)"
-                    : "Order: High to Low (click for Low to High)"
-                }
+                onClick={() => setIsSelectorCollapsed(false)}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#262a35] hover:bg-[#323746] border border-[#d4af37]/50 text-[#f2ca50] text-xs font-mono font-semibold transition-all cursor-pointer shadow-[0_0_10px_rgba(212,175,55,0.2)]"
+                title="Show character search and selection window"
               >
-                {sortDirection === "asc" ? (
-                  <ArrowUp className="w-3.5 h-3.5 text-[#f2ca50]" />
-                ) : (
-                  <ArrowDown className="w-3.5 h-3.5 text-[#99907c]" />
-                )}
-                <span>
-                  {sortBy === "name"
-                    ? sortDirection === "asc"
-                      ? "Z → A"
-                      : "A → Z"
-                    : sortDirection === "asc"
-                    ? "Low → High"
-                    : "High → Low"}
+                <ChevronDown className="w-4 h-4 text-[#f2ca50]" />
+                <span>Show Character Selector</span>
+              </button>
+
+              {/* Active Character Chip */}
+              <div className="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-[#0a0e18]/80 border border-white/10">
+                <CharacterAvatar
+                  name={selected.name}
+                  element={selected.element}
+                  iconUrl={selected.iconUrl}
+                  size="sm"
+                />
+                <span className="text-xs font-bold text-[#dfe2f1]">
+                  {selected.name}
                 </span>
-              </button>
-            </div>
-
-            {/* Reset Filters button */}
-            {hasActiveFilters && (
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-[#d4af37]/40 hover:border-[#d4af37] text-[#f2ca50] cursor-pointer transition-colors"
-              >
-                Reset Filters
-              </button>
-            )}
-          </div>
-
-          {/* Bottom Controls Row: Element Filter Pills & Match Counter */}
-          <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
-            <div className="flex flex-wrap items-center gap-1">
-              {ELEMENT_FILTERS.map((el) => {
-                const active = elementFilter === el;
-                return (
-                  <button
-                    key={el}
-                    type="button"
-                    onClick={() => setElementFilter(el)}
-                    className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
-                      active
-                        ? "bg-[#262a35] border-[#d4af37]/50 text-[#f2ca50] font-semibold"
-                        : "bg-[#0a0e18]/60 border-white/10 text-[#99907c] hover:text-[#dfe2f1]"
-                    }`}
-                  >
-                    {el}
-                  </button>
-                );
-              })}
-            </div>
-
-            <div className="text-[11px] font-mono text-[#99907c] tabular-nums">
-              Showing <strong className="text-[#dfe2f1]">{filteredCharacters.length}</strong> of {characters.length} characters
+                <span
+                  className={`text-[10px] font-mono font-bold ${theme.textClass}`}
+                >
+                  C{selected.constellation}
+                </span>
+                <span className="text-[10px] font-mono text-[#99907c] tabular-nums">
+                  Lv.{selected.level} • {selected.totalCv.toFixed(0)} CV
+                </span>
+              </div>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 overflow-x-auto pb-1">
-          {filteredCharacters.length === 0 ? (
-            <div className="w-full py-4 text-center text-xs text-[#99907c] space-y-1.5">
-              <div>No characters match your current search and filter criteria.</div>
-              {hasActiveFilters && (
-                <button
-                  type="button"
-                  onClick={handleResetFilters}
-                  className="text-[11px] font-mono text-[#f2ca50] underline cursor-pointer"
-                >
-                  Reset all filters
-                </button>
-              )}
-            </div>
-          ) : (
-            filteredCharacters.map((char) => {
-              const active = Number(char.avatarId) === Number(selected.avatarId);
-              const cTheme = ELEMENT_THEMES[char.element];
-              return (
-                <button
-                  key={char.avatarId}
-                  type="button"
-                  onClick={() => handleSelectCharacter(char.avatarId)}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
-                    active
-                      ? "bg-[#262a35] border-[#d4af37] shadow-[0_0_14px_rgba(212,175,55,0.22)]"
-                      : "bg-[#0a0e18]/70 border-white/10 hover:border-white/25"
-                  }`}
-                >
-                  <CharacterAvatar
-                    name={char.name}
-                    element={char.element}
-                    iconUrl={char.iconUrl}
-                    size="sm"
-                  />
-                  <div className="text-left">
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-xs font-bold text-[#dfe2f1]">
-                        {char.name}
-                      </span>
-                      <span
-                        className={`text-[10px] font-mono font-bold ${cTheme.textClass}`}
+        {/* Expanded Drawer: Full search, filters, and character carousel */}
+        <div
+          className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+            isSelectorCollapsed
+              ? "grid-rows-[0fr] opacity-0 pointer-events-none"
+              : "grid-rows-[1fr] opacity-100"
+          }`}
+        >
+          <div className="overflow-hidden">
+            <div className="p-3 space-y-2.5">
+              <div className="flex flex-col gap-2">
+                {/* Top Controls Row: Search Input + Weapon Type Select + Rarity Toggle + Sort By Select + Reset + Hide Button */}
+                <div className="flex flex-wrap items-center gap-2">
+                  {/* Search Input strictly for character names */}
+                  <div className="relative flex-1 min-w-[200px] max-w-xs">
+                    <Search className="w-3.5 h-3.5 text-[#99907c] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      placeholder="Search characters by name..."
+                      className="w-full bg-[#0a0e18]/80 border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
+                    />
+                    {searchQuery && (
+                      <button
+                        type="button"
+                        onClick={() => setSearchQuery("")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#99907c] hover:text-[#dfe2f1] cursor-pointer"
+                        title="Clear search"
                       >
-                        C{char.constellation}
-                      </span>
-                    </div>
-                    <div className="text-[10px] font-mono text-[#99907c] tabular-nums">
-                      Lv.{char.level} • {detectWeaponType(char)} • {char.totalCv.toFixed(0)} CV
-                    </div>
+                        <X className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
-                </button>
-              );
-            })
-          )}
+
+                  {/* Weapon Type Filter */}
+                  <div className="flex items-center">
+                    <select
+                      value={weaponTypeFilter}
+                      onChange={(e) => setWeaponTypeFilter(e.target.value as WeaponTypeFilter)}
+                      className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
+                      title="Filter by weapon type"
+                    >
+                      {WEAPON_TYPE_FILTERS.map((w) => (
+                        <option key={w.value} value={w.value}>
+                          {w.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Rarity Filter */}
+                  <div className="flex items-center gap-1 bg-[#0a0e18]/70 p-0.5 rounded-lg border border-white/10">
+                    {(["All", 5, 4] as const).map((r) => {
+                      const active = rarityFilter === r;
+                      return (
+                        <button
+                          key={String(r)}
+                          type="button"
+                          onClick={() => setRarityFilter(r)}
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                            active
+                              ? "bg-[#262a35] border border-[#d4af37]/50 text-[#f2ca50] font-bold"
+                              : "text-[#99907c] hover:text-[#dfe2f1]"
+                          }`}
+                        >
+                          {r === "All" ? "All Stars" : `${r}★`}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Sort Selector & Direction Toggle */}
+                  <div className="flex items-center gap-1.5">
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as SortOption)}
+                      className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
+                      title="Sort metric"
+                    >
+                      {SORT_OPTIONS.map((opt) => (
+                        <option key={opt.value} value={opt.value}>
+                          Sort: {opt.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
+                      }
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer ${
+                        sortDirection === "asc"
+                          ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-semibold"
+                          : "bg-[#0a0e18]/80 border-white/15 text-[#dfe2f1] hover:border-white/30"
+                      }`}
+                      title={
+                        sortBy === "name"
+                          ? sortDirection === "asc"
+                            ? "Order: Z to A (click for A to Z)"
+                            : "Order: A to Z (click for Z to A)"
+                          : sortDirection === "asc"
+                          ? "Order: Low to High (click for High to Low)"
+                          : "Order: High to Low (click for Low to High)"
+                      }
+                    >
+                      {sortDirection === "asc" ? (
+                        <ArrowUp className="w-3.5 h-3.5 text-[#f2ca50]" />
+                      ) : (
+                        <ArrowDown className="w-3.5 h-3.5 text-[#99907c]" />
+                      )}
+                      <span>
+                        {sortBy === "name"
+                          ? sortDirection === "asc"
+                            ? "Z → A"
+                            : "A → Z"
+                          : sortDirection === "asc"
+                          ? "Low → High"
+                          : "High → Low"}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* Reset Filters button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-[#d4af37]/40 hover:border-[#d4af37] text-[#f2ca50] cursor-pointer transition-colors"
+                    >
+                      Reset Filters
+                    </button>
+                  )}
+
+                  {/* Hide Selector Button */}
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectorCollapsed(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-white/15 bg-[#0a0e18]/80 hover:bg-[#1c2438] hover:border-[#d4af37]/40 text-[#d0c5af] hover:text-[#dfe2f1] text-xs font-mono transition-colors cursor-pointer shrink-0 ml-auto"
+                    title="Hide character search and selection window"
+                  >
+                    <ChevronUp className="w-3.5 h-3.5 text-[#f2ca50]" />
+                    <span>Hide Selector</span>
+                  </button>
+                </div>
+
+                {/* Bottom Controls Row: Element Filter Pills & Match Counter */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
+                  <div className="flex flex-wrap items-center gap-1">
+                    {ELEMENT_FILTERS.map((el) => {
+                      const active = elementFilter === el;
+                      return (
+                        <button
+                          key={el}
+                          type="button"
+                          onClick={() => setElementFilter(el)}
+                          className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                            active
+                              ? "bg-[#262a35] border-[#d4af37]/50 text-[#f2ca50] font-semibold"
+                              : "bg-[#0a0e18]/60 border-white/10 text-[#99907c] hover:text-[#dfe2f1]"
+                          }`}
+                        >
+                          {el}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div className="text-[11px] font-mono text-[#99907c] tabular-nums">
+                    Showing <strong className="text-[#dfe2f1]">{filteredCharacters.length}</strong> of {characters.length} characters
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 overflow-x-auto pb-1">
+                {filteredCharacters.length === 0 ? (
+                  <div className="w-full py-4 text-center text-xs text-[#99907c] space-y-1.5">
+                    <div>No characters match your current search and filter criteria.</div>
+                    {hasActiveFilters && (
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="text-[11px] font-mono text-[#f2ca50] underline cursor-pointer"
+                      >
+                        Reset all filters
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  filteredCharacters.map((char) => {
+                    const active = Number(char.avatarId) === Number(selected.avatarId);
+                    const cTheme = ELEMENT_THEMES[char.element];
+                    return (
+                      <button
+                        key={char.avatarId}
+                        type="button"
+                        onClick={() => handleSelectCharacter(char.avatarId)}
+                        className={`flex items-center gap-2.5 px-3 py-2 rounded-lg border shrink-0 transition-all cursor-pointer ${
+                          active
+                            ? "bg-[#262a35] border-[#d4af37] shadow-[0_0_14px_rgba(212,175,55,0.22)]"
+                            : "bg-[#0a0e18]/70 border-white/10 hover:border-white/25"
+                        }`}
+                      >
+                        <CharacterAvatar
+                          name={char.name}
+                          element={char.element}
+                          iconUrl={char.iconUrl}
+                          size="sm"
+                        />
+                        <div className="text-left">
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-xs font-bold text-[#dfe2f1]">
+                              {char.name}
+                            </span>
+                            <span
+                              className={`text-[10px] font-mono font-bold ${cTheme.textClass}`}
+                            >
+                              C{char.constellation}
+                            </span>
+                          </div>
+                          <div className="text-[10px] font-mono text-[#99907c] tabular-nums">
+                            Lv.{char.level} • {detectWeaponType(char)} • {char.totalCv.toFixed(0)} CV
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

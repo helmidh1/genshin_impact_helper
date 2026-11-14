@@ -19,7 +19,7 @@ import {
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
 import { ELEMENT_THEMES } from "@/lib/elements";
-import { calculateResinEta } from "@/lib/directives-engine";
+import { calculateResinEta, formatCrystalflyTrapCooldown } from "@/lib/directives-engine";
 import type {
   DailyDirectives,
   HoyolabCheckinState,
@@ -61,6 +61,7 @@ interface OverviewTabProps {
 export function OverviewTab({
   profile,
   directives,
+  onUpdateDirectives,
   onRefreshUid,
   onOpenHoyolabSync,
   isSyncing,
@@ -112,6 +113,51 @@ export function OverviewTab({
   }, [profile.characters]);
 
   const resinEta = calculateResinEta(directives);
+
+  const crystalflyStatus = useMemo(() => {
+    if (directives.crystalflyTrapDeployedAt) {
+      return formatCrystalflyTrapCooldown(directives.crystalflyTrapDeployedAt);
+    }
+    if (directives.crystalflyTrapReady !== undefined) {
+      return {
+        ready: directives.crystalflyTrapReady,
+        label:
+          directives.crystalflyTrapRecoveryText ??
+          (directives.crystalflyTrapReady ? "Ready to deploy" : "On cooldown"),
+        remainingMs: 0,
+      };
+    }
+    return {
+      ready: true,
+      label: "Ready to deploy",
+      remainingMs: 0,
+    };
+  }, [
+    directives.crystalflyTrapDeployedAt,
+    directives.crystalflyTrapReady,
+    directives.crystalflyTrapRecoveryText,
+  ]);
+
+  const handleToggleCrystalflyTrap = () => {
+    if (!onUpdateDirectives) return;
+    if (crystalflyStatus.ready) {
+      const nowIso = new Date().toISOString();
+      const nextStatus = formatCrystalflyTrapCooldown(nowIso);
+      onUpdateDirectives({
+        ...directives,
+        crystalflyTrapDeployedAt: nowIso,
+        crystalflyTrapReady: nextStatus.ready,
+        crystalflyTrapRecoveryText: nextStatus.label,
+      });
+    } else {
+      onUpdateDirectives({
+        ...directives,
+        crystalflyTrapDeployedAt: null,
+        crystalflyTrapReady: true,
+        crystalflyTrapRecoveryText: "Ready to deploy",
+      });
+    }
+  };
 
   const handleExportProfile = () => {
     const blob = new Blob([JSON.stringify(profile, null, 2)], {
@@ -573,6 +619,48 @@ export function OverviewTab({
             >
               {directives.parametricReady ? "Ready" : "On Cooldown"}
             </span>
+          </div>
+
+          {/* Crystalfly Trap */}
+          <div className="flex items-center justify-between p-2.5 rounded-lg bg-[#0a0e18]/75 border border-white/8">
+            <div>
+              <div className="flex items-center gap-1.5">
+                <div className="text-xs font-medium text-[#dfe2f1]">
+                  Crystalfly Trap
+                </div>
+                <span className="text-[9px] font-mono text-[#4cd6fb] bg-[#4cd6fb]/10 px-1.5 py-0.5 rounded border border-[#4cd6fb]/30 font-semibold">
+                  15 Cores
+                </span>
+              </div>
+              <div className="text-[10px] font-mono text-[#99907c] mt-0.5">
+                {crystalflyStatus.label}
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className={`px-2 py-1 rounded text-[10px] font-mono font-bold ${
+                  crystalflyStatus.ready
+                    ? "bg-[#d4af37]/20 text-[#f2ca50] border border-[#d4af37]/50"
+                    : "bg-[#1c1f2a] text-[#99907c] border border-white/10"
+                }`}
+              >
+                {crystalflyStatus.ready ? "Ready" : "On Cooldown"}
+              </span>
+              {onUpdateDirectives && (
+                <button
+                  type="button"
+                  onClick={handleToggleCrystalflyTrap}
+                  className="px-2 py-1 rounded text-[10px] font-mono font-semibold transition-colors bg-[#131a2a] hover:bg-[#1c2438] text-[#d0c5af] hover:text-[#dfe2f1] border border-white/12 cursor-pointer"
+                  title={
+                    crystalflyStatus.ready
+                      ? "Deploy trap (starts 7-day countdown)"
+                      : "Reset trap back to ready state"
+                  }
+                >
+                  {crystalflyStatus.ready ? "Deploy (7d)" : "Reset"}
+                </button>
+              )}
+            </div>
           </div>
         </div>
 

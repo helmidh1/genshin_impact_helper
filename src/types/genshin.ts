@@ -242,6 +242,9 @@ export interface DailyDirectives {
   expeditionsFinished?: number;
   parametricReady: boolean;
   parametricRecoveryText?: string;
+  crystalflyTrapReady?: boolean;
+  crystalflyTrapRecoveryText?: string;
+  crystalflyTrapDeployedAt?: string | null;
   customGoals?: CustomGoal[];
   lastUpdatedAt: string;
   source?: "hoyolab" | "demo" | "synced";
@@ -262,6 +265,12 @@ export interface ParametricCooldownParams {
   days?: number;
   hours?: number;
   minutes?: number;
+}
+
+export interface CrystalflyTrapStatus {
+  ready: boolean;
+  label: string;
+  remainingMs: number;
 }
 
 export interface RawGeetestData {
