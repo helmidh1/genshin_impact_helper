@@ -12,6 +12,7 @@ Rules and conventions enforced during code review (`/code-review`). Reviewer age
   - Adapters must delegate artifact and build evaluation to `evaluateArtifacts()` from `src/lib/build-engine.ts`.
   - Never perform inline stat grading or duplicate theorycrafting calculations inside adapters or UI components.
 - **No Middleman Re-exports**: Do not re-export `BuildEngine` functions or types from adapter files (`enka.ts`, `hoyolab.ts`). Consumers must import directly from `@/lib/build-engine` or `@/types/genshin`.
+- **Monotonic Timing Invariant**: Any time-based resource recovery or countdown calculation must be derived deterministically from anchor timestamp progress (`elapsedMs % INTERVAL_MS`), never by repeatedly decrementing mutable cached seconds against a static anchor.
 
 ## 2. Type Locality & Domain Models
 
@@ -22,14 +23,15 @@ Rules and conventions enforced during code review (`/code-review`). Reviewer age
 
 ## 3. Server & Client Boundaries
 
+- **Universal Domain Isolation**: Domain store and utility modules (`src/lib/*.ts`) must remain pure universal TypeScript with **zero React hook imports** (`useEffect`, `useState`, `useSyncExternalStore`), ensuring safe import in server API routes, workers, and Node scripts. React hooks must strictly reside in dedicated client modules (`src/lib/use-*.ts` or components) marked with `"use client";`.
 - **Secret & AI Isolation**: `@google/genai` client instances and `process.env.GEMINI_API_KEY` must remain strictly server-side (`src/app/api/**` and `src/lib/gemini.ts`). Never import AI SDKs or expose API keys to `"use client"` components.
 - **Client Components**: Any component utilizing React hooks (`useState`, `useEffect`, etc.) or browser globals (`localStorage`, `window`) must start with `"use client";`.
 - **Local-First Degradation**: Any AI-assisted coaching feature must fall back cleanly to local heuristics when `GEMINI_API_KEY` is missing or unreachable.
 
 ## 4. Quality Gates
 
-- Every modification must pass the unified check suite before merging:
+- Every modification must pass both the unified check suite and production bundle verification before merging or committing:
   ```bash
-  npm run check
+  npm run check && npm run build
   ```
-  (`npm run typecheck && npm run lint && npm test`).
+  (`npm run typecheck && npm run lint && npm test && next build`).

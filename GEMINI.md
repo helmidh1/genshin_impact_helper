@@ -94,5 +94,6 @@ Run commands from the repository root (`.`):
 - **Protected & Generated Paths — Do Not Edit Manually**:
   - `.env*` (except `.env.example`), `.next/`, `node_modules/`, `next-env.d.ts`, `tsconfig.tsbuildinfo`, and `package-lock.json` (unless managing dependencies via `npm`).
 - **API & Schema Alignment**: When updating `CoachStrategyResponse` or `STRATEGY_JSON_SCHEMA`, keep `src/types/genshin.ts`, `src/lib/gemini.ts` (both Gemini schema and `buildFallbackStrategy`), and `src/components/CoachTab.tsx` synchronized.
+- **Server vs. Client Module Boundaries**: Pure domain logic and stores (`src/lib/*.ts`) must not import React client hooks (`useEffect`, `useState`, `useSyncExternalStore`), ensuring they remain universally safe for Server Component and API Route imports. React hooks belong in dedicated client files (`src/lib/use-*.ts`) marked with `"use client";`.
 - **Verify Changes**: After code edits, run `npm run check` and `npm run build` to ensure TypeScript, ESLint, unit tests, and Next.js bundling succeed cleanly.
 
