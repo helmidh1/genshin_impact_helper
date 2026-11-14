@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 import { DEFAULT_DIRECTIVES, DEMO_TRAVELER_PROFILE } from "@/lib/demo-data";
-import { createProfileStore } from "@/lib/profile-store";
+import {
+  createProfileStore,
+  getActiveProfile,
+  getCoachChat,
+  getCoachStrategy,
+  getDirectives,
+  getParty,
+  SERVER_SNAPSHOT,
+} from "@/lib/profile-store";
 import { reconcileResin } from "@/lib/directives-engine";
 import { MemoryStorageAdapter } from "@/lib/test-fixtures";
 import type { DailyDirectives, TravelerProfile } from "@/types/genshin";
@@ -346,5 +354,32 @@ describe("ProfileStore - Legacy V1 Migration", () => {
 
     const party = store.getParty();
     expect(party.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("exports a frozen SERVER_SNAPSHOT matching initial default state", () => {
+    expect(SERVER_SNAPSHOT).toBeDefined();
+    expect(SERVER_SNAPSHOT.version).toBe(2);
+    expect(SERVER_SNAPSHOT.activeUid).toBe(DEMO_TRAVELER_PROFILE.uid);
+    expect(SERVER_SNAPSHOT.profiles[0].uid).toBe(DEMO_TRAVELER_PROFILE.uid);
+    expect(Object.isFrozen(SERVER_SNAPSHOT)).toBe(true);
+  });
+
+  it("pure query functions evaluate correctly on ProfileState without store instance", () => {
+    const active = getActiveProfile(SERVER_SNAPSHOT);
+    expect(active.uid).toBe(DEMO_TRAVELER_PROFILE.uid);
+    expect(active.nickname).toBe(DEMO_TRAVELER_PROFILE.nickname);
+
+    const directives = getDirectives(SERVER_SNAPSHOT);
+    expect(directives.resin).toBe(DEFAULT_DIRECTIVES.resin);
+
+    const party = getParty(SERVER_SNAPSHOT);
+    expect(party.length).toBe(4);
+    expect(party[0]).toBe(DEMO_TRAVELER_PROFILE.characters[0].name);
+
+    const strategy = getCoachStrategy(SERVER_SNAPSHOT);
+    expect(strategy).toBeNull();
+
+    const chat = getCoachChat(SERVER_SNAPSHOT);
+    expect(chat).toEqual([]);
   });
 });

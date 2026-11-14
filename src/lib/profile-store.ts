@@ -52,7 +52,7 @@ export class BrowserLocalStorageAdapter implements StorageAdapter {
   }
 }
 
-function createDefaultState(): ProfileState {
+export function createDefaultState(): ProfileState {
   return {
     version: 2,
     activeUid: DEMO_TRAVELER_PROFILE.uid,
@@ -71,6 +71,8 @@ function createDefaultState(): ProfileState {
     equipmentAdviceByChar: {},
   };
 }
+
+export const SERVER_SNAPSHOT: ProfileState = Object.freeze(createDefaultState());
 
 export class ProfileStore {
   private state: ProfileState;
@@ -490,40 +492,69 @@ export class ProfileStore {
     this.adapter.removeItem(HOYOLAB_CREDS_KEY);
   }
 
-  // Domain Queries
+  // Domain Queries (delegating to pure functions)
   getActiveProfile(): TravelerProfile {
-    return (
-      this.state.profiles.find((p) => p.uid === this.state.activeUid) ??
-      this.state.profiles[0] ??
-      DEMO_TRAVELER_PROFILE
-    );
+    return getActiveProfile(this.state);
   }
 
   getDirectives(uid?: string): DailyDirectives {
-    const targetUid = uid ?? this.state.activeUid;
-    return this.state.directivesByUid[targetUid] ?? DEFAULT_DIRECTIVES;
+    return getDirectives(this.state, uid);
   }
 
   getParty(uid?: string): string[] {
-    const targetUid = uid ?? this.state.activeUid;
-    const existing = this.state.partyByUid[targetUid];
-    if (existing && existing.length > 0) return existing;
-
-    const profile =
-      this.state.profiles.find((p) => p.uid === targetUid) ??
-      DEMO_TRAVELER_PROFILE;
-    return profile.characters.slice(0, 4).map((c) => c.name);
+    return getParty(this.state, uid);
   }
 
   getCoachStrategy(uid?: string): CoachStrategyResponse | null {
-    const targetUid = uid ?? this.state.activeUid;
-    return this.state.coachStrategyByUid[targetUid] ?? null;
+    return getCoachStrategy(this.state, uid);
   }
 
   getCoachChat(uid?: string): CoachFollowUpMessage[] {
-    const targetUid = uid ?? this.state.activeUid;
-    return this.state.coachChatByUid[targetUid] ?? [];
+    return getCoachChat(this.state, uid);
   }
+}
+
+// Pure Domain Queries on ProfileState (safe for SSR, hydration snapshots, and React components)
+export function getActiveProfile(state: ProfileState): TravelerProfile {
+  return (
+    state.profiles.find((p) => p.uid === state.activeUid) ??
+    state.profiles[0] ??
+    DEMO_TRAVELER_PROFILE
+  );
+}
+
+export function getDirectives(
+  state: ProfileState,
+  uid?: string
+): DailyDirectives {
+  const targetUid = uid ?? state.activeUid;
+  return state.directivesByUid[targetUid] ?? DEFAULT_DIRECTIVES;
+}
+
+export function getParty(state: ProfileState, uid?: string): string[] {
+  const targetUid = uid ?? state.activeUid;
+  const existing = state.partyByUid[targetUid];
+  if (existing && existing.length > 0) return existing;
+
+  const profile =
+    state.profiles.find((p) => p.uid === targetUid) ?? DEMO_TRAVELER_PROFILE;
+  return profile.characters.slice(0, 4).map((c) => c.name);
+}
+
+export function getCoachStrategy(
+  state: ProfileState,
+  uid?: string
+): CoachStrategyResponse | null {
+  const targetUid = uid ?? state.activeUid;
+  return state.coachStrategyByUid[targetUid] ?? null;
+}
+
+export function getCoachChat(
+  state: ProfileState,
+  uid?: string
+): CoachFollowUpMessage[] {
+  const targetUid = uid ?? state.activeUid;
+  return state.coachChatByUid[targetUid] ?? [];
 }
 
 export function createProfileStore(

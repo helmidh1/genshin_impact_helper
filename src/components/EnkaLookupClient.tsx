@@ -17,11 +17,15 @@ import {
 import { ShowcaseTab } from "@/components/ShowcaseTab";
 import { profileStore } from "@/lib/profile-store";
 import { useProfileStore } from "@/lib/use-profile-store";
+import { useHasMounted } from "@/lib/use-has-mounted";
 import type { TravelerProfile } from "@/types/genshin";
 
 export function EnkaLookupClient() {
+  const hasMounted = useHasMounted();
   const { profiles } = useProfileStore();
-  const savedEnkaProfiles = profiles.filter((p) => p.source === "enka");
+  const savedEnkaProfiles = hasMounted
+    ? profiles.filter((p) => p.source === "enka")
+    : [];
 
   const [uidInput, setUidInput] = useState("");
   const [queriedProfile, setQueriedProfile] = useState<TravelerProfile | null>(null);

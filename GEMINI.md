@@ -25,8 +25,10 @@
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, delegating fallback heuristics directly to `CoachEngine`. |
-| `src/lib/profile-store.ts` | Reactive client-side `ProfileStore` (`teyvat_strategist_store_v2`) with `useSyncExternalStore`, intent actions, resin recovery reconciliation, and legacy `_v1` migration. |
-| `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore` and resin reconciliation (14 tests via Vitest). |
+| `src/lib/profile-store.ts` | Pure domain store (`ProfileStore`) managing state persistence (`teyvat_strategist_store_v2`), `SERVER_SNAPSHOT`, pure state query helpers, and legacy `_v1` migration. Zero React hooks. |
+| `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore`, pure state queries, and resin reconciliation (16 tests via Vitest). |
+| `src/lib/use-profile-store.ts` | Reactive client hook (`useProfileStore`) connecting `ProfileStore` via `useSyncExternalStore` with stable `SERVER_SNAPSHOT`. |
+| `src/lib/use-has-mounted.ts` | Reactive client hook (`useHasMounted`) leveraging `useSyncExternalStore` to cleanly prevent SSR hydration mismatches in local-first components without cascading re-renders. |
 | `src/lib/test-fixtures.ts` | Centralized test fixture builders (`createMockCharacter`, `createMockArtifacts`, `createMockEncounter`, `MemoryStorageAdapter`) ensuring domain interface fidelity by construction. |
 | `src/lib/demo-data.ts` | Built-in demo traveler profile (`DEMO_TRAVELER_PROFILE`), default daily directives (`DEFAULT_DIRECTIVES`), and encounter/boss presets (`ENCOUNTER_PRESETS`). |
 | `src/lib/elements.ts` | Elemental theme colors/icons (`ELEMENT_THEMES`) and party resonance calculations (`computeResonances`). |

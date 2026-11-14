@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useSyncExternalStore } from "react";
-import { profileStore, type ProfileStore } from "@/lib/profile-store";
+import {
+  profileStore,
+  SERVER_SNAPSHOT,
+  type ProfileStore,
+} from "@/lib/profile-store";
 import type { ProfileState } from "@/types/genshin";
 
 let activeInterval: NodeJS.Timeout | null = null;
@@ -31,6 +35,6 @@ export function useProfileStore(): ProfileState {
   return useSyncExternalStore(
     (listener) => profileStore.subscribe(listener),
     () => profileStore.getState(),
-    () => profileStore.getState()
+    () => SERVER_SNAPSHOT
   );
 }

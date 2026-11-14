@@ -11,8 +11,16 @@ import { TopNavBar, type AppTab } from "@/components/TopNavBar";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { ELEMENT_THEMES } from "@/lib/elements";
 import { getHoyolabUtc8Date } from "@/lib/directives-engine";
-import { profileStore } from "@/lib/profile-store";
+import {
+  getActiveProfile,
+  getCoachChat,
+  getCoachStrategy,
+  getDirectives,
+  getParty,
+  profileStore,
+} from "@/lib/profile-store";
 import { useProfileStore } from "@/lib/use-profile-store";
+import { useHasMounted } from "@/lib/use-has-mounted";
 import type {
   CoachFollowUpMessage,
   CoachStrategyResponse,
@@ -109,7 +117,64 @@ function createInitialPreviewStrategy(
   };
 }
 
+function TeyvatSkeletonShell() {
+  return (
+    <div className="min-h-screen flex flex-col bg-[#0b0e14] text-[#dfe2f1]">
+      <header className="w-full sticky top-0 z-40 border-b border-[#d4af37]/20 bg-[#0d121f]/80 backdrop-blur-md">
+        <div className="max-w-[1720px] mx-auto px-4 md:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-lg bg-[#d4af37]/15 border border-[#d4af37]/40 flex items-center justify-center animate-pulse">
+              <div className="w-4 h-4 rounded-full bg-[#d4af37]/60" />
+            </div>
+            <div>
+              <div className="text-sm font-semibold tracking-wide text-white">
+                Teyvat Strategist
+              </div>
+              <div className="text-[10px] font-mono text-[#99907c] tracking-wider">
+                COMBAT & ROSTER TELEMETRY
+              </div>
+            </div>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <div className="h-8 w-24 rounded-lg bg-[#1a2235]/60 animate-pulse" />
+            <div className="h-8 w-24 rounded-lg bg-[#1a2235]/60 animate-pulse" />
+            <div className="h-8 w-24 rounded-lg bg-[#1a2235]/60 animate-pulse" />
+          </div>
+          <div className="h-9 w-32 rounded-lg bg-[#1a2235]/60 border border-[#d4af37]/20 animate-pulse" />
+        </div>
+      </header>
+
+      <main className="flex-1 max-w-[1720px] w-full mx-auto px-4 md:px-6 lg:px-8 py-6 space-y-6">
+        <div className="h-28 rounded-xl bg-[#131a2a]/40 border border-[#d4af37]/20 animate-pulse p-6 flex items-center justify-between">
+          <div className="space-y-2">
+            <div className="h-4 w-48 rounded bg-[#1f293d]" />
+            <div className="h-8 w-32 rounded bg-[#1f293d]" />
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-[#99907c]">
+            <div className="w-2 h-2 rounded-full bg-[#f2ca50] animate-ping" />
+            <span>CONNECTING LOCAL TELEMETRY...</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="h-72 rounded-xl bg-[#131a2a]/30 border border-white/5 animate-pulse p-4 space-y-4"
+            >
+              <div className="h-36 rounded-lg bg-[#1f293d]/50" />
+              <div className="h-4 w-28 rounded bg-[#1f293d]" />
+              <div className="h-3 w-40 rounded bg-[#1f293d]/60" />
+            </div>
+          ))}
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function TeyvatStrategistApp() {
+  const hasMounted = useHasMounted();
   const storeState = useProfileStore();
   const [activeTab, setActiveTab] = useState<AppTab>("overview");
   const [syncError, setSyncError] = useState<string | null>(null);
@@ -122,19 +187,22 @@ export function TeyvatStrategistApp() {
   const [isCheckinBusy, setIsCheckinBusy] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
 
-  const activeProfile = profileStore.getActiveProfile();
-  const directives = profileStore.getDirectives();
-  const partyNames = profileStore.getParty();
+  const activeProfile = getActiveProfile(storeState);
+  const directives = getDirectives(storeState);
+  const partyNames = getParty(storeState);
   const strategy =
-    profileStore.getCoachStrategy() ??
+    getCoachStrategy(storeState) ??
     createInitialPreviewStrategy(activeProfile.characters);
-  const chatMessages = profileStore.getCoachChat();
+  const chatMessages = getCoachChat(storeState);
   const savedProfiles = storeState.profiles;
   const checkinState = storeState.checkinState;
 
-  const [selectedAvatarId, setSelectedAvatarId] = useState<number>(() => {
-    return activeProfile.characters[0]?.avatarId ?? 0;
-  });
+  const [selectedAvatarId, setSelectedAvatarId] = useState<number>(0);
+
+  const effectiveAvatarId =
+    activeProfile.characters.some((c) => c.avatarId === selectedAvatarId)
+      ? selectedAvatarId
+      : (activeProfile.characters[0]?.avatarId ?? 0);
 
   const runCheckin = async (
     action: HoyolabCheckinAction,
@@ -401,6 +469,10 @@ export function TeyvatStrategistApp() {
     profileStore.setCoachChat(activeProfile.uid, next);
   };
 
+  if (!hasMounted) {
+    return <TeyvatSkeletonShell />;
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <TopNavBar
@@ -459,7 +531,7 @@ export function TeyvatStrategistApp() {
         {activeTab === "showcase" && (
           <ShowcaseTab
             characters={activeProfile.characters}
-            selectedAvatarId={selectedAvatarId}
+            selectedAvatarId={effectiveAvatarId}
             onSelectAvatar={setSelectedAvatarId}
             onCoachCharacter={(char) => {
               const others = activeProfile.characters
