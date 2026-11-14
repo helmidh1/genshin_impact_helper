@@ -24,7 +24,8 @@
 | `src/lib/directives-engine.test.ts` | Unit tests for DirectivesEngine (Vitest). |
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
-| `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, delegating fallback heuristics directly to `CoachEngine`. |
+| `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, error response unwrapping (`extractGeminiErrorMessage`), delegating fallback heuristics directly to `CoachEngine`. |
+| `src/lib/gemini.test.ts` | Unit tests for Gemini error unwrapping and message extraction (6 tests via Vitest). |
 | `src/lib/profile-store.ts` | Pure domain store (`ProfileStore`) managing state persistence (`teyvat_strategist_store_v2`), `SERVER_SNAPSHOT`, pure state query helpers, and legacy `_v1` migration. Zero React hooks. |
 | `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore`, pure state queries, and resin reconciliation (16 tests via Vitest). |
 | `src/lib/use-profile-store.ts` | Reactive client hook (`useProfileStore`) connecting `ProfileStore` via `useSyncExternalStore` with stable `SERVER_SNAPSHOT`. |

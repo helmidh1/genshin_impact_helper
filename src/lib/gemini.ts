@@ -117,6 +117,56 @@ export function hasEnvGeminiKey(): boolean {
   return Boolean(process.env.GEMINI_API_KEY?.trim());
 }
 
+/**
+ * Extracts human-readable error descriptions from Google GenAI SDK errors,
+ * parsing nested API response bodies to avoid cryptic `400 API error occurred: {"httpMeta":...}` messages.
+ */
+export function extractGeminiErrorMessage(err: unknown): string {
+  if (!err || typeof err !== "object") {
+    return "Gemini request failed.";
+  }
+
+  // 1. Try to extract from body or cause.body
+  const rawBody =
+    ("body" in err && typeof (err as { body: unknown }).body === "string"
+      ? (err as { body: string }).body
+      : null) ??
+    ("cause" in err &&
+    typeof (err as { cause?: { body?: unknown } }).cause?.body === "string"
+      ? (err as { cause: { body: string } }).cause.body
+      : null);
+
+  if (rawBody) {
+    try {
+      const parsed = JSON.parse(rawBody);
+      const errorObj = Array.isArray(parsed) ? parsed[0]?.error : parsed?.error;
+      if (errorObj?.message) {
+        return errorObj.message;
+      }
+    } catch {
+      // Ignore JSON parse error on raw body
+    }
+  }
+
+  // 2. Try nested error.message
+  if (
+    "error" in err &&
+    typeof (err as { error?: { message?: unknown } }).error?.message === "string"
+  ) {
+    return (err as { error: { message: string } }).error.message;
+  }
+
+  // 3. Fallback to standard Error message
+  if (err instanceof Error) {
+    if (err.message.includes('API error occurred: {"httpMeta"')) {
+      return "Gemini API rejected request (HTTP 400). Please check your Gemini API key, permissions, or quota.";
+    }
+    return err.message;
+  }
+
+  return "Gemini request failed.";
+}
+
 export async function generateCoachStrategy(params: {
   party: ShowcaseCharacter[];
   encounter: EncounterPreset;
@@ -171,7 +221,7 @@ export async function generateCoachStrategy(params: {
       interactionId: interaction.id,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Gemini request failed.";
+    const message = extractGeminiErrorMessage(err);
     return buildFallbackStrategy(
       params.party,
       params.encounter,
@@ -219,7 +269,7 @@ export async function askCoachFollowUp(params: {
       source: "gemini",
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Gemini request failed.";
+    const message = extractGeminiErrorMessage(err);
     return {
       source: "fallback",
       answer: `Could not reach Gemini (${message}). Verify your Gemini API key and try again.`,
@@ -327,7 +377,7 @@ export async function askCoachEquipment(params: {
       interactionId: interaction.id,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Gemini request failed.";
+    const message = extractGeminiErrorMessage(err);
     const fallback = buildFallbackEquipmentAdvice(params);
     return {
       ...fallback,
