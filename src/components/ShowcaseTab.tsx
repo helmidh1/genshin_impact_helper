@@ -8,6 +8,7 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
+  HelpCircle,
   Search,
   Shield,
   Sparkles,
@@ -23,7 +24,9 @@ import {
   getEquipmentGuide,
   getWeaponsForArtifactSet,
 } from "@/lib/equipment-data";
-import type { ShowcaseCharacter } from "@/types/genshin";
+import type { ArtifactSlot, ShowcaseCharacter } from "@/types/genshin";
+
+const ARTIFACT_SLOTS: ArtifactSlot[] = ["Flower", "Plume", "Sands", "Goblet", "Circlet"];
 
 type ElementFilter = "All" | ShowcaseCharacter["element"];
 type WeaponTypeFilter = "All" | "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst";
@@ -79,6 +82,7 @@ export function ShowcaseTab({
   const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
   const [viewMode, setViewMode] = useState<"artifacts" | "equipment">("artifacts");
   const [isSelectorCollapsed, setIsSelectorCollapsed] = useState(false);
+  const [showCvExplanation, setShowCvExplanation] = useState(false);
 
   // Keep responsive local selection state synchronized with parent selectedAvatarId prop
   const [prevPropId, setPrevPropId] = useState<number>(selectedAvatarId);
@@ -664,10 +668,25 @@ export function ShowcaseTab({
             {/* Crit Value Banner */}
             <div className="p-3 rounded-lg bg-[#0a0e18]/85 border border-[#d4af37]/30 flex items-center justify-between">
               <div>
-                <div className="text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
-                  Artifact Crit Value
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                    Artifact Crit Value
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowCvExplanation((prev) => !prev)}
+                    className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer border ${
+                      showCvExplanation
+                        ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-semibold"
+                        : "bg-[#131a2a] border-white/10 text-[#99907c] hover:text-[#dfe2f1] hover:border-white/20"
+                    }`}
+                    title={showCvExplanation ? "Hide CV explanation" : "What is Crit Value (CV)?"}
+                  >
+                    <HelpCircle className="w-3 h-3 text-[#f2ca50]" />
+                    <span>{showCvExplanation ? "Hide Info" : "What is CV?"}</span>
+                  </button>
                 </div>
-                <div className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold text-[#f2ca50] tabular-nums">
+                <div className="font-[family-name:var(--font-space-grotesk)] text-2xl font-bold text-[#f2ca50] tabular-nums mt-0.5">
                   {selected.totalCv.toFixed(1)} CV
                 </div>
               </div>
@@ -678,6 +697,104 @@ export function ShowcaseTab({
                 <div className="text-[11px] font-mono text-[#4cd6fb] mt-1">
                   Ratio {selected.stats.critRate.toFixed(1)} :{" "}
                   {selected.stats.critDmg.toFixed(1)}
+                </div>
+              </div>
+            </div>
+
+            {/* Expandable CV Explanation Drawer */}
+            <div
+              className={`grid transition-[grid-template-rows,opacity] duration-300 ease-in-out ${
+                showCvExplanation
+                  ? "grid-rows-[1fr] opacity-100"
+                  : "grid-rows-[0fr] opacity-0 pointer-events-none"
+              }`}
+            >
+              <div className="overflow-hidden">
+                <div className="p-3.5 rounded-lg bg-[#0a0e18]/90 border border-white/10 space-y-3 text-xs leading-relaxed">
+                  {/* Header & Formula */}
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[11px] font-bold text-[#f2ca50] uppercase tracking-wider">
+                        Crit Value (CV) Formula
+                      </span>
+                      <span className="text-[10px] font-mono text-[#4cd6fb] px-1.5 py-0.5 rounded bg-[#4cd6fb]/10 border border-[#4cd6fb]/20">
+                        Universal KQM Standard
+                      </span>
+                    </div>
+                    <div className="p-2 rounded bg-[#131a2a]/90 border border-white/8 font-mono text-center text-xs text-[#dfe2f1] font-bold tracking-wide">
+                      CV = (CRIT Rate × 2) + CRIT DMG
+                    </div>
+                  </div>
+
+                  {/* Why 1:2 ratio & Substats */}
+                  <div className="space-y-1.5 text-[11px] text-[#d0c5af]">
+                    <p>
+                      • <strong className="text-[#dfe2f1]">Why multiply CR by 2?</strong> In Genshin Impact’s artifact roll budget, 1% CRIT Rate is allocated the exact same value weight as 2% CRIT DMG (a max 5★ roll is 3.9% CR vs 7.8% CD).
+                    </p>
+                    <p>
+                      • <strong className="text-[#dfe2f1]">Substats Only:</strong> Artifact CV calculates only bonus roll substats across all 5 equipped pieces. Guaranteed Circlet main stats are excluded to accurately measure pure roll quality.
+                    </p>
+                  </div>
+
+                  {/* Build Tier Scale */}
+                  <div className="pt-2 border-t border-white/8 space-y-1.5">
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                      Build Quality Benchmarks
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 text-center font-mono text-[10px]">
+                      <div className="p-1 rounded bg-white/[0.03] border border-white/6">
+                        <div className="text-[#99907c]">&lt;100 CV</div>
+                        <div className="text-[#dfe2f1] font-semibold">Developing</div>
+                      </div>
+                      <div className="p-1 rounded bg-white/[0.03] border border-white/6">
+                        <div className="text-[#99907c]">100–139 CV</div>
+                        <div className="text-[#dfe2f1] font-semibold">In Progress</div>
+                      </div>
+                      <div className="p-1 rounded bg-[#4cd6fb]/10 border border-[#4cd6fb]/30">
+                        <div className="text-[#4cd6fb]">140–179 CV</div>
+                        <div className="text-[#dfe2f1] font-semibold">Solid</div>
+                      </div>
+                      <div className="p-1 rounded bg-[#b388ff]/10 border border-[#b388ff]/30">
+                        <div className="text-[#b388ff]">180–219 CV</div>
+                        <div className="text-[#dfe2f1] font-semibold">Great</div>
+                      </div>
+                      <div className="p-1 rounded bg-[#d4af37]/20 border border-[#d4af37]/50 col-span-2 sm:col-span-1">
+                        <div className="text-[#f2ca50]">220+ CV</div>
+                        <div className="text-[#f2ca50] font-bold">Elite (Abyss)</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live 5-Piece Breakdown for Current Character */}
+                  <div className="pt-2 border-t border-white/8 space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[#99907c]">
+                      <span className="uppercase tracking-wider">
+                        {selected.name}’s 5-Piece Breakdown
+                      </span>
+                      <span className="text-[#f2ca50] font-semibold">
+                        Total: {selected.totalCv.toFixed(1)} CV
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-5 gap-1 text-center font-mono text-[10px]">
+                      {ARTIFACT_SLOTS.map((slot) => {
+                        const piece = selected.artifacts.find((a) => a.slot === slot);
+                        const cv = piece ? piece.critValue : 0;
+                        return (
+                          <div
+                            key={slot}
+                            className="p-1 rounded bg-white/[0.02] border border-white/6"
+                          >
+                            <div className="text-[9px] text-[#99907c] uppercase">
+                              {slot}
+                            </div>
+                            <div className="text-[#dfe2f1] font-bold mt-0.5 tabular-nums">
+                              {cv.toFixed(1)}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
