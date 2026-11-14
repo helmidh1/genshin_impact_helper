@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
+import { compareEquippedWithRecommendations } from "@/lib/build-engine";
 import {
-  compareEquippedWithRecommendations,
   getEquipmentGuide,
   getMainStatsForArtifactSet,
   getWeaponsForArtifactSet,

@@ -15,8 +15,8 @@ import {
   Target,
   Wand2,
 } from "lucide-react";
+import { compareEquippedWithRecommendations } from "@/lib/build-engine";
 import {
-  compareEquippedWithRecommendations,
   getEquipmentGuide,
   getMainStatsForArtifactSet,
   getWeaponsForArtifactSet,

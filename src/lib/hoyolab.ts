@@ -1,22 +1,15 @@
 import { createHash, randomInt } from "node:crypto";
-import {
-  estimateRolls,
-  evaluateBuildQuality,
-  getEnkaMetadata,
-  getRollTier,
-  round1,
-  type EnkaMetadataCache,
-} from "@/lib/enka";
+import { evaluateArtifacts, round1 } from "@/lib/build-engine";
 import type {
-  ArtifactPiece,
   ArtifactSlot,
   CharacterStats,
   DailyDirectives,
   ElementType,
   HoyolabCredentialsPayload,
   HoyolabSyncResponse,
+  RawArtifactInput,
+  RawSubstatInput,
   ShowcaseCharacter,
-  SubstatRoll,
   TravelerProfile,
 } from "@/types/genshin";
 
@@ -495,8 +488,7 @@ interface HoyolabPropInfo {
 function parseHoyolabCharacter(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw: any,
-  propertyMap: Record<string, HoyolabPropInfo>,
-  meta: EnkaMetadataCache
+  propertyMap: Record<string, HoyolabPropInfo>
 ): ShowcaseCharacter {
   const base = raw.base ?? raw;
   const avatarId = Number(base.id ?? 0);
@@ -515,46 +507,22 @@ function parseHoyolabCharacter(
   const constellation = Number(base.actived_constellation_num ?? 0);
   const friendship = Number(base.fetter ?? 1);
 
-  // Use Enka SkillOrder if available to reliably separate NA / Skill / Burst from Alt Sprint
-  const storeChar = meta.characters[String(avatarId)];
+  // Extract skills from HoYoLAB active combat talents
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawSkills: any[] = Array.isArray(raw.skills) ? raw.skills : [];
-  const skillById = new Map<number, number>();
-  for (const sk of rawSkills) {
-    if (sk?.skill_id !== undefined) {
-      skillById.set(Number(sk.skill_id), Number(sk.level ?? 1));
-    }
-  }
-
-  let normal = 1;
-  let skill = 1;
-  let burst = 1;
-  const order = storeChar?.SkillOrder;
-  if (
-    Array.isArray(order) &&
-    order.length >= 3 &&
-    skillById.has(order[0]) &&
-    skillById.has(order[1]) &&
-    skillById.has(order[2])
-  ) {
-    normal = skillById.get(order[0]) ?? 1;
-    skill = skillById.get(order[1]) ?? 1;
-    burst = skillById.get(order[2]) ?? 1;
-  } else {
-    const activeSkills = rawSkills.filter(
-      (s) =>
-        Number(s.skill_type) === 1 &&
-        Array.isArray(s.skill_affix_list) &&
-        s.skill_affix_list.length > 0
-    );
-    const fallbackSkills =
-      activeSkills.length >= 3
-        ? activeSkills
-        : rawSkills.filter((s) => Number(s.skill_type) === 1);
-    normal = Number(fallbackSkills[0]?.level ?? 1);
-    skill = Number(fallbackSkills[1]?.level ?? 1);
-    burst = Number(fallbackSkills[2]?.level ?? 1);
-  }
+  const activeSkills = rawSkills.filter(
+    (s) =>
+      Number(s.skill_type) === 1 &&
+      Array.isArray(s.skill_affix_list) &&
+      s.skill_affix_list.length > 0
+  );
+  const fallbackSkills =
+    activeSkills.length >= 3
+      ? activeSkills
+      : rawSkills.filter((s) => Number(s.skill_type) === 1);
+  const normal = Number(fallbackSkills[0]?.level ?? 1);
+  const skill = Number(fallbackSkills[1]?.level ?? 1);
+  const burst = Number(fallbackSkills[2]?.level ?? 1);
 
   // Weapon
   const w = raw.weapon ?? {};
@@ -579,34 +547,11 @@ function parseHoyolabCharacter(
   // Artifacts
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rawRelics: any[] = Array.isArray(raw.relics) ? raw.relics : [];
-  const setCounts = new Map<
-    string,
-    { name: string; count: number; bonusSummary?: string }
-  >();
-  let totalCv = 0;
-
-  const artifacts: ArtifactPiece[] = rawRelics.map((relic, idx) => {
+  const rawArtifactInputs: RawArtifactInput[] = rawRelics.map((relic) => {
     const slot: ArtifactSlot = POS_TO_SLOT[Number(relic.pos)] ?? "Flower";
     const setObj = relic.set ?? {};
     const setName = String(setObj.name ?? "Artifact Set");
-    const setKey = setObj.id ? String(setObj.id) : `set-${setName}-${idx}`;
-
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const affixes: any[] = Array.isArray(setObj.affixes) ? setObj.affixes : [];
-    const activeAffixes = affixes
-      .filter((a) => a.enabled)
-      .map((a) => `${a.activation_number}pc: ${a.effect}`);
-
-    const existingSet = setCounts.get(setKey);
-    const nextCount = (existingSet?.count ?? 0) + 1;
-    setCounts.set(setKey, {
-      name: setName,
-      count: nextCount,
-      bonusSummary:
-        activeAffixes.length > 0
-          ? activeAffixes.join(" • ")
-          : existingSet?.bonusSummary,
-    });
+    const relicLevel = Number(relic.level ?? 20);
 
     const mainProp = relic.main_property ?? {};
     const mainInfo = propertyMap[String(mainProp.property_type)];
@@ -615,6 +560,7 @@ function parseHoyolabCharacter(
       mainProp.value,
       Number(mainProp.property_type)
     );
+    const mainVal = parseNumericStat(String(mainProp.value ?? "0"));
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const rawSubs: any[] = Array.isArray(relic.sub_property_list)
@@ -623,14 +569,10 @@ function parseHoyolabCharacter(
     const rawTimes = rawSubs.map((s) => Number(s.times ?? -1));
     const hasZeroUpgradeTag = rawTimes.some((t) => t === 0);
     const timesSum = rawTimes.reduce((acc, t) => acc + Math.max(0, t), 0);
-    const relicLevel = Number(relic.level ?? 20);
     const timesAreUpgradeOffsets =
       hasZeroUpgradeTag || (relicLevel >= 16 && timesSum <= 5);
 
-    let pieceCr = 0;
-    let pieceCd = 0;
-
-    const substats: SubstatRoll[] = rawSubs.map((sub) => {
+    const substats: RawSubstatInput[] = rawSubs.map((sub) => {
       const subInfo = propertyMap[String(sub.property_type)];
       const rawValStr = String(sub.value ?? "0");
       const subMeta = canonicalStatLabel(
@@ -639,35 +581,22 @@ function parseHoyolabCharacter(
         Number(sub.property_type)
       );
       const numVal = parseNumericStat(rawValStr);
-      if (subMeta.label === "CRIT Rate") pieceCr += numVal;
-      if (subMeta.label === "CRIT DMG") pieceCd += numVal;
-
-      const wasted =
-        subMeta.label === "HP" ||
-        subMeta.label === "DEF" ||
-        subMeta.label === "ATK";
-
       const rawT = Number(sub.times ?? -1);
-      let rolls: number;
+      let rolls: number | undefined;
       if (rawT >= 0) {
         rolls = timesAreUpgradeOffsets
           ? Math.max(1, Math.min(6, rawT + 1))
           : Math.max(1, Math.min(6, rawT));
-      } else {
-        rolls = estimateRolls(subMeta.label, numVal);
       }
 
       return {
+        id: sub.property_type,
         label: subMeta.label,
-        value: rawValStr.replace(/^\+/, ""),
-        numericValue: numVal,
+        value: numVal,
+        isPercent: subMeta.isPercent,
         rolls,
-        wasted,
       };
     });
-
-    const critValue = round1(pieceCr * 2 + pieceCd);
-    totalCv += critValue;
 
     return {
       slot,
@@ -676,27 +605,15 @@ function parseHoyolabCharacter(
       iconUrl: relic.icon ? String(relic.icon) : undefined,
       level: relicLevel,
       rarity: Number(relic.rarity ?? 5),
-      mainStatLabel: mainMeta.label,
-      mainStatValue: String(mainProp.value ?? "0"),
+      mainStat: {
+        id: mainProp.property_type,
+        label: mainMeta.label,
+        value: mainVal,
+        isPercent: mainMeta.isPercent,
+      },
       substats,
-      critValue,
-      tier: getRollTier(critValue),
     };
   });
-
-  const artifactSets = Array.from(setCounts.values())
-    .sort((a, b) => b.count - a.count)
-    .map((entry) => ({
-      name: entry.name,
-      count: entry.count,
-      bonusSummary:
-        entry.bonusSummary ??
-        (entry.count >= 4
-          ? "4-Piece Set Bonus Active"
-          : entry.count >= 2
-            ? "2-Piece Set Bonus Active"
-            : "Off-Piece"),
-    }));
 
   // Combat stats from selected_properties + base_properties + extra_properties + element_properties
   const elemDmgLabel = ELEMENT_DMG_LABELS[element];
@@ -776,12 +693,7 @@ function parseHoyolabCharacter(
     ...(healingBonus > 0 ? { healingBonus } : {}),
   };
 
-  const roundedTotalCv = round1(totalCv);
-  const { buildTier, critique } = evaluateBuildQuality(
-    artifacts,
-    stats,
-    roundedTotalCv
-  );
+  const evaluation = evaluateArtifacts(rawArtifactInputs, stats);
 
   return {
     avatarId,
@@ -794,12 +706,12 @@ function parseHoyolabCharacter(
     iconUrl: base.icon ? String(base.icon) : undefined,
     talents: { normal, skill, burst },
     weapon,
-    artifactSets,
-    artifacts,
+    artifactSets: evaluation.artifactSets,
+    artifacts: evaluation.artifacts,
     stats,
-    totalCv: roundedTotalCv,
-    buildTier,
-    critique,
+    totalCv: evaluation.totalCv,
+    buildTier: evaluation.buildTier,
+    critique: evaluation.critique,
   };
 }
 
@@ -826,7 +738,7 @@ export async function fetchHoyolabProfile(
       ? "https://sg-public-api.hoyolab.com/event/game_record/genshin/api"
       : "https://api-takumi-record.mihoyo.com/game_record/app/genshin/api";
 
-  const [indexData, listData, meta] = await Promise.all([
+  const [indexData, listData] = await Promise.all([
     requestHoyolab<{
       role?: {
         nickname?: string;
@@ -856,7 +768,6 @@ export async function fetchHoyolabProfile(
       region,
       auth,
     }),
-    getEnkaMetadata(),
   ]);
 
   const charIds = (listData.list ?? [])
@@ -965,7 +876,7 @@ export async function fetchHoyolabProfile(
   ]);
 
   const characters = detailedList.map((char) =>
-    parseHoyolabCharacter(char, propertyMap, meta)
+    parseHoyolabCharacter(char, propertyMap)
   );
 
   const ar = Number(indexData.role?.level ?? 60);

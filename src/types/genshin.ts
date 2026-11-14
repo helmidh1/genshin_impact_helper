@@ -29,6 +29,49 @@ export interface SubstatRoll {
   wasted?: boolean;
 }
 
+export type ScalingArchetype = "crit-dps" | "hp-support" | "def-scaler" | "em-driver";
+
+export interface RawSubstatInput {
+  id?: string | number;
+  propKey?: string;
+  label: string;
+  value: number;
+  isPercent?: boolean;
+  rolls?: number;
+}
+
+export interface RawArtifactInput {
+  slot: ArtifactSlot;
+  name?: string;
+  setName: string;
+  level: number;
+  rarity: number;
+  iconUrl?: string;
+  mainStat: {
+    id?: string | number;
+    label: string;
+    value: number;
+    isPercent?: boolean;
+  };
+  substats: RawSubstatInput[];
+  affixIds?: number[];
+}
+
+export interface BuildEvaluationResult {
+  totalCv: number;
+  buildTier: string;
+  critique?: {
+    bottleneck: string;
+    recommendation: string;
+  };
+  artifactSets: Array<{
+    name: string;
+    count: number;
+    bonusSummary: string;
+  }>;
+  artifacts: ArtifactPiece[];
+}
+
 export interface ArtifactPiece {
   slot: ArtifactSlot;
   name: string;
