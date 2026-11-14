@@ -60,7 +60,7 @@
 - **Linting**: Configured in `eslint.config.mjs` using `eslint-config-next/core-web-vitals` and `eslint-config-next/typescript`.
 
 ## 5. Tooling & Workflows
-Run commands from the repository root (`.`):
+Run commands from the repository root:
 
 - **Install dependencies**:
   ```bash
