@@ -26,6 +26,7 @@ Rules and conventions enforced during code review (`/code-review`). Reviewer age
 ## 3. Server & Client Boundaries
 
 - **Universal Domain Isolation**: Domain store and utility modules (`src/lib/*.ts`) must remain pure universal TypeScript with **zero React hook imports** (`useEffect`, `useState`, `useSyncExternalStore`), ensuring safe import in server API routes, workers, and Node scripts. React hooks must strictly reside in dedicated client modules (`src/lib/use-*.ts` or components) marked with `"use client";`.
+- **Client Import Boundary Enforcement**: Client components (`src/components/**/*.{ts,tsx}`) and client hooks (`src/lib/use-*.ts`) must never import server-side data adapters or AI SDK modules (`@/lib/enka`, `@/lib/hoyolab`, `@/lib/hoyolab-checkin`, `@/lib/gemini`). This is mechanically enforced via an ESLint `no-restricted-imports` rule in `eslint.config.mjs`.
 - **Secret & AI Isolation**: `@google/genai` client instances and `process.env.GEMINI_API_KEY` must remain strictly server-side (`src/app/api/**` and `src/lib/gemini.ts`). Never import AI SDKs or expose API keys to `"use client"` components.
 - **Client Components**: Any component utilizing React hooks (`useState`, `useEffect`, etc.) or browser globals (`localStorage`, `window`) must start with `"use client";`.
 - **Local-First Degradation**: Any AI-assisted coaching feature must fall back cleanly to local heuristics when `GEMINI_API_KEY` is missing or unreachable.
