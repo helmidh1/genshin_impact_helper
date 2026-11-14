@@ -3,11 +3,15 @@ import {
   buildFallbackEquipmentAdvice,
   buildFallbackFollowUpAnswer,
   buildFallbackStrategy,
+  filterMetaTeamPresets,
+  filterRosterCharacters,
+  filterSavedParties,
   getPlayableMetaTeams,
   recommendedErFor,
   summarizeParty,
 } from "./coach-engine";
 import { createMockCharacter, createMockEncounter } from "@/lib/test-fixtures";
+import type { SavedPartySetup } from "@/types/genshin";
 
 const mockEncounter = createMockEncounter();
 
@@ -509,5 +513,90 @@ describe("CoachEngine: Playable Meta Lineups", () => {
     const playable = getPlayableMetaTeams(rosterWithoutBennett);
     const rational = playable.find((t) => t.id === "raiden-national");
     expect(rational).toBeUndefined();
+  });
+});
+
+describe("CoachEngine: Search & Filter Helpers", () => {
+  const mockSavedParties: SavedPartySetup[] = [
+    {
+      id: "p1",
+      name: "Abyss Floor 12 Team A",
+      characterNames: ["Arlecchino", "Yelan", "Kaedehara Kazuha", "Zhongli"],
+      createdAt: "2026-11-14T00:00:00Z",
+    },
+    {
+      id: "p2",
+      name: "Overvape Engine",
+      characterNames: ["Raiden Shogun", "Xiangling", "Chevreuse", "Bennett"],
+      createdAt: "2026-11-14T00:00:00Z",
+    },
+  ];
+
+  it("filters saved parties by party name and character name", () => {
+    // Empty query returns all
+    expect(filterSavedParties(mockSavedParties, "")).toEqual(mockSavedParties);
+    expect(filterSavedParties(mockSavedParties, "   ")).toEqual(mockSavedParties);
+
+    // Filter by name
+    const byName = filterSavedParties(mockSavedParties, "Abyss");
+    expect(byName).toHaveLength(1);
+    expect(byName[0].id).toBe("p1");
+
+    // Filter by character name (case-insensitive)
+    const byChar = filterSavedParties(mockSavedParties, "chevreuse");
+    expect(byChar).toHaveLength(1);
+    expect(byChar[0].id).toBe("p2");
+
+    // No match
+    expect(filterSavedParties(mockSavedParties, "Neuvillette")).toHaveLength(0);
+  });
+
+  it("filters meta team presets by preset name, archetype, and character names", () => {
+    const presets = getPlayableMetaTeams([
+      createMockCharacter("Raiden Shogun", "Electro"),
+      createMockCharacter("Xiangling", "Pyro"),
+      createMockCharacter("Xingqiu", "Hydro"),
+      createMockCharacter("Bennett", "Pyro"),
+      createMockCharacter("Arlecchino", "Pyro"),
+      createMockCharacter("Yelan", "Hydro"),
+      createMockCharacter("Zhongli", "Geo"),
+    ]);
+
+    expect(filterMetaTeamPresets(presets, "")).toEqual(presets);
+
+    // Filter by archetype
+    const byArchetype = filterMetaTeamPresets(presets, "vaporize");
+    expect(byArchetype.length).toBeGreaterThanOrEqual(1);
+
+    // Filter by character
+    const byChar = filterMetaTeamPresets(presets, "Arlecchino");
+    expect(byChar.length).toBeGreaterThanOrEqual(1);
+
+    // No match
+    expect(filterMetaTeamPresets(presets, "NonExistent")).toHaveLength(0);
+  });
+
+  it("filters roster characters by character name and element", () => {
+    const roster = [
+      createMockCharacter("Furina", "Hydro"),
+      createMockCharacter("Bennett", "Pyro"),
+      createMockCharacter("Xiangling", "Pyro"),
+      createMockCharacter("Kaedehara Kazuha", "Anemo"),
+    ];
+
+    expect(filterRosterCharacters(roster, "")).toEqual(roster);
+
+    // Filter by name
+    const byName = filterRosterCharacters(roster, "kazuha");
+    expect(byName).toHaveLength(1);
+    expect(byName[0].name).toBe("Kaedehara Kazuha");
+
+    // Filter by element
+    const byElement = filterRosterCharacters(roster, "pyro");
+    expect(byElement).toHaveLength(2);
+    expect(byElement.map((c) => c.name)).toEqual(["Bennett", "Xiangling"]);
+
+    // No match
+    expect(filterRosterCharacters(roster, "Electro")).toHaveLength(0);
   });
 });

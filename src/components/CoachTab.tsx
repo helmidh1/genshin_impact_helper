@@ -16,6 +16,7 @@ import {
   FolderOpen,
   KeyRound,
   Lightbulb,
+  Search,
   Send,
   ShieldCheck,
   Sparkles,
@@ -25,7 +26,12 @@ import {
   X,
 } from "lucide-react";
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
-import { getPlayableMetaTeams } from "@/lib/coach-engine";
+import {
+  filterMetaTeamPresets,
+  filterRosterCharacters,
+  filterSavedParties,
+  getPlayableMetaTeams,
+} from "@/lib/coach-engine";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { computeResonances, ELEMENT_THEMES } from "@/lib/elements";
 import { profileStore } from "@/lib/profile-store";
@@ -114,6 +120,9 @@ export function CoachTab({
   const [isLoadMenuOpen, setIsLoadMenuOpen] = useState(false);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [savePartyNameInput, setSavePartyNameInput] = useState("");
+  const [teamSearchQuery, setTeamSearchQuery] = useState("");
+  const [activeSlotPickerIdx, setActiveSlotPickerIdx] = useState<number | null>(null);
+  const [slotSearchQuery, setSlotSearchQuery] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -209,9 +218,20 @@ export function CoachTab({
     [roster]
   );
 
+  const filteredSavedParties = useMemo(
+    () => filterSavedParties(savedParties, teamSearchQuery),
+    [savedParties, teamSearchQuery]
+  );
+
+  const filteredMetaTeams = useMemo(
+    () => filterMetaTeamPresets(playableMetaTeams, teamSearchQuery),
+    [playableMetaTeams, teamSearchQuery]
+  );
+
   const handleEquipTeam = (characterNames: string[]) => {
     onChangePartyNames(characterNames);
     setIsLoadMenuOpen(false);
+    setTeamSearchQuery("");
   };
 
   const handleOpenSaveModal = () => {
@@ -428,7 +448,10 @@ export function CoachTab({
                 <div className="relative">
                   <button
                     type="button"
-                    onClick={() => setIsLoadMenuOpen((v) => !v)}
+                    onClick={() => {
+                      setIsLoadMenuOpen((v) => !v);
+                      setTeamSearchQuery("");
+                    }}
                     className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-white/12 hover:border-[#d4af37]/50 text-[#f2ca50] cursor-pointer flex items-center gap-1.5 transition-colors"
                     title="Load saved team or playable meta preset"
                   >
@@ -445,127 +468,180 @@ export function CoachTab({
                     <>
                       <div
                         className="fixed inset-0 z-40"
-                        onClick={() => setIsLoadMenuOpen(false)}
+                        onClick={() => {
+                          setIsLoadMenuOpen(false);
+                          setTeamSearchQuery("");
+                        }}
                       />
                       <div className="absolute right-0 mt-2 w-80 sm:w-96 rounded-xl bg-[#131a2a] border border-[#d4af37]/35 shadow-2xl p-3 z-50 space-y-3 max-h-[460px] overflow-y-auto">
-                        {/* Saved Teams Section */}
-                        <div className="space-y-1.5">
-                          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
-                            <span className="flex items-center gap-1.5 text-[#f2ca50] font-semibold">
-                              <FolderOpen className="w-3 h-3" />
-                              Saved Account Teams
-                            </span>
-                            <span className="tabular-nums">
-                              {savedParties.length}
-                            </span>
+                        {/* Search Bar */}
+                        <div className="sticky top-0 bg-[#131a2a] pb-2 border-b border-white/10 z-10">
+                          <div className="relative">
+                            <Search className="w-3.5 h-3.5 text-[#99907c] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                            <input
+                              type="text"
+                              autoFocus
+                              value={teamSearchQuery}
+                              onChange={(e) => setTeamSearchQuery(e.target.value)}
+                              placeholder="Search saved teams, meta, or characters..."
+                              className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-[#0a0e18] border border-white/15 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
+                            />
+                            {teamSearchQuery && (
+                              <button
+                                type="button"
+                                onClick={() => setTeamSearchQuery("")}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#99907c] hover:text-[#dfe2f1] cursor-pointer"
+                              >
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
                           </div>
+                        </div>
 
-                          {savedParties.length === 0 ? (
-                            <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
-                              No custom teams saved yet. Click the bookmark icon to save your current 4 characters.
+                        {/* Saved Teams Section */}
+                        {(!teamSearchQuery.trim() || filteredSavedParties.length > 0) && (
+                          <div className="space-y-1.5">
+                            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                              <span className="flex items-center gap-1.5 text-[#f2ca50] font-semibold">
+                                <FolderOpen className="w-3 h-3" />
+                                Saved Account Teams
+                              </span>
+                              <span className="tabular-nums">
+                                {teamSearchQuery.trim()
+                                  ? `${filteredSavedParties.length} / ${savedParties.length}`
+                                  : savedParties.length}
+                              </span>
                             </div>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {savedParties.map((p) => (
-                                <div
-                                  key={p.id}
-                                  className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#d4af37]/40 transition-colors flex items-center justify-between gap-2 group"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEquipTeam(p.characterNames)}
-                                    className="flex-1 text-left min-w-0 cursor-pointer"
+
+                            {savedParties.length === 0 ? (
+                              <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
+                                No custom teams saved yet. Click the bookmark icon to save your current 4 characters.
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {filteredSavedParties.map((p) => (
+                                  <div
+                                    key={p.id}
+                                    className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#d4af37]/40 transition-colors flex items-center justify-between gap-2 group"
                                   >
-                                    <div className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#f2ca50] truncate">
-                                      {p.name}
-                                    </div>
-                                    <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
-                                      {p.characterNames.join(" • ")}
-                                    </div>
-                                  </button>
-                                  <div className="flex items-center gap-1 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() => handleEquipTeam(p.characterNames)}
-                                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#f2ca50] hover:bg-[#d4af37]/25 cursor-pointer"
+                                      className="flex-1 text-left min-w-0 cursor-pointer"
+                                    >
+                                      <div className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#f2ca50] truncate">
+                                        {p.name}
+                                      </div>
+                                      <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
+                                        {p.characterNames.join(" • ")}
+                                      </div>
+                                    </button>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEquipTeam(p.characterNames)}
+                                        className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#f2ca50] hover:bg-[#d4af37]/25 cursor-pointer"
+                                      >
+                                        Equip
+                                      </button>
+                                      {onRemoveSavedParty && (
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            onRemoveSavedParty(p.id);
+                                          }}
+                                          title="Delete saved team"
+                                          className="p-1 rounded text-[#99907c] hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
+                                        >
+                                          <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Playable Meta Presets Section */}
+                        {(!teamSearchQuery.trim() || filteredMetaTeams.length > 0) && (
+                          <div className="space-y-1.5 pt-2 border-t border-white/10">
+                            <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
+                              <span className="flex items-center gap-1.5 text-[#4cd6fb] font-semibold">
+                                <Sparkles className="w-3 h-3 text-[#4cd6fb]" />
+                                Playable Meta Presets
+                              </span>
+                              <span className="text-[#4cd6fb] tabular-nums">
+                                {teamSearchQuery.trim()
+                                  ? `${filteredMetaTeams.length} / ${playableMetaTeams.length}`
+                                  : `${playableMetaTeams.length} available`}
+                              </span>
+                            </div>
+
+                            {playableMetaTeams.length === 0 ? (
+                              <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
+                                No full meta presets matched your current roster. Sync more characters or create a custom team.
+                              </div>
+                            ) : (
+                              <div className="space-y-1.5">
+                                {filteredMetaTeams.map((preset) => (
+                                  <div
+                                    key={preset.id}
+                                    className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#4cd6fb]/40 transition-colors flex items-center justify-between gap-2 group"
+                                  >
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEquipTeam(preset.characterNames)}
+                                      className="flex-1 text-left min-w-0 cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#4cd6fb] truncate">
+                                          {preset.name}
+                                        </span>
+                                        <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/30 text-[#4cd6fb] shrink-0">
+                                          {preset.archetype}
+                                        </span>
+                                      </div>
+                                      <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
+                                        {preset.characterNames.join(" • ")}
+                                      </div>
+                                      <div className="text-[10px] text-[#d0c5af]/80 truncate mt-0.5">
+                                        {preset.description}
+                                      </div>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEquipTeam(preset.characterNames)}
+                                      className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/40 text-[#4cd6fb] hover:bg-[#00b4d8]/25 cursor-pointer shrink-0"
                                     >
                                       Equip
                                     </button>
-                                    {onRemoveSavedParty && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          onRemoveSavedParty(p.id);
-                                        }}
-                                        title="Delete saved team"
-                                        className="p-1 rounded text-[#99907c] hover:text-red-400 hover:bg-red-950/30 transition-colors cursor-pointer"
-                                      >
-                                        <Trash2 className="w-3.5 h-3.5" />
-                                      </button>
-                                    )}
                                   </div>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Playable Meta Presets Section */}
-                        <div className="space-y-1.5 pt-2 border-t border-white/10">
-                          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-[#99907c]">
-                            <span className="flex items-center gap-1.5 text-[#4cd6fb] font-semibold">
-                              <Sparkles className="w-3 h-3 text-[#4cd6fb]" />
-                              Playable Meta Presets
-                            </span>
-                            <span className="text-[#4cd6fb] tabular-nums">
-                              {playableMetaTeams.length} available
-                            </span>
+                                ))}
+                              </div>
+                            )}
                           </div>
+                        )}
 
-                          {playableMetaTeams.length === 0 ? (
-                            <div className="p-2.5 rounded-lg bg-[#0a0e18] border border-white/5 text-[11px] text-[#99907c] leading-relaxed">
-                              No full meta presets matched your current roster. Sync more characters or create a custom team.
-                            </div>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {playableMetaTeams.map((preset) => (
-                                <div
-                                  key={preset.id}
-                                  className="p-2 rounded-lg bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-[#4cd6fb]/40 transition-colors flex items-center justify-between gap-2 group"
-                                >
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEquipTeam(preset.characterNames)}
-                                    className="flex-1 text-left min-w-0 cursor-pointer"
-                                  >
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs font-semibold text-[#dfe2f1] group-hover:text-[#4cd6fb] truncate">
-                                        {preset.name}
-                                      </span>
-                                      <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/30 text-[#4cd6fb] shrink-0">
-                                        {preset.archetype}
-                                      </span>
-                                    </div>
-                                    <div className="text-[10px] font-mono text-[#99907c] truncate mt-0.5">
-                                      {preset.characterNames.join(" • ")}
-                                    </div>
-                                    <div className="text-[10px] text-[#d0c5af]/80 truncate mt-0.5">
-                                      {preset.description}
-                                    </div>
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleEquipTeam(preset.characterNames)}
-                                    className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/40 text-[#4cd6fb] hover:bg-[#00b4d8]/25 cursor-pointer shrink-0"
-                                  >
-                                    Equip
-                                  </button>
-                                </div>
-                              ))}
+                        {/* No Results Fallback */}
+                        {teamSearchQuery.trim() &&
+                          filteredSavedParties.length === 0 &&
+                          filteredMetaTeams.length === 0 && (
+                            <div className="p-3.5 rounded-lg bg-[#0a0e18] border border-white/5 text-center space-y-2">
+                              <p className="text-xs text-[#99907c]">
+                                No teams match &ldquo;<span className="text-[#dfe2f1]">{teamSearchQuery}</span>&rdquo;
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => setTeamSearchQuery("")}
+                                className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-white/12 text-[#f2ca50] hover:bg-[#262a35] cursor-pointer"
+                              >
+                                Clear search filter
+                              </button>
                             </div>
                           )}
-                        </div>
 
                         {/* Quick Import Action */}
                         <div className="pt-2 border-t border-white/10">
@@ -574,6 +650,7 @@ export function CoachTab({
                             onClick={() => {
                               handleImportTop4();
                               setIsLoadMenuOpen(false);
+                              setTeamSearchQuery("");
                             }}
                             className="w-full py-1.5 px-2 rounded-lg bg-[#1c1f2a] hover:bg-[#262a35] border border-white/12 text-[11px] font-mono text-[#f2ca50] text-center cursor-pointer transition-colors"
                           >
@@ -605,46 +682,157 @@ export function CoachTab({
               </div>
             ) : (
               <div className="space-y-2.5">
-                {party.map((char, idx) => (
-                  <div
-                    key={`${char.avatarId}-${idx}`}
-                    className="p-2.5 rounded-lg bg-[#0a0e18]/80 border border-white/10 space-y-2"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <CharacterAvatar
-                        name={char.name}
-                        element={char.element}
-                        iconUrl={char.iconUrl}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <select
-                            value={char.name}
-                            onChange={(e) => handleSlotChange(idx, e.target.value)}
-                            className="bg-[#171b26] border border-white/15 rounded px-2 py-1 text-xs font-semibold text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] w-full"
-                          >
-                            {roster.map((opt) => (
-                              <option key={opt.avatarId} value={opt.name}>
-                                {opt.name} (C{opt.constellation} • {opt.element})
-                              </option>
-                            ))}
-                          </select>
-                          <span className="text-[10px] font-mono text-[#99907c] shrink-0">
-                            SLOT 0{idx + 1}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-[#d0c5af] tabular-nums">
-                          <ElementBadge element={char.element} compact />
-                          <span className="truncate">{char.weapon.name}</span>
-                          <span className="text-[#4cd6fb] ml-auto shrink-0">
-                            ER {char.stats.er.toFixed(0)}%
-                          </span>
+                {party.map((char, idx) => {
+                  const filteredRoster = filterRosterCharacters(roster, slotSearchQuery);
+                  const isPickerOpen = activeSlotPickerIdx === idx;
+
+                  return (
+                    <div
+                      key={`${char.avatarId}-${idx}`}
+                      className="p-2.5 rounded-lg bg-[#0a0e18]/80 border border-white/10 space-y-2"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <CharacterAvatar
+                          name={char.name}
+                          element={char.element}
+                          iconUrl={char.iconUrl}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="relative">
+                            <div className="flex items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (isPickerOpen) {
+                                    setActiveSlotPickerIdx(null);
+                                    setSlotSearchQuery("");
+                                  } else {
+                                    setActiveSlotPickerIdx(idx);
+                                    setSlotSearchQuery("");
+                                  }
+                                }}
+                                className="bg-[#171b26] hover:bg-[#1f2535] border border-white/15 hover:border-[#d4af37]/50 rounded px-2.5 py-1 text-xs font-semibold text-[#dfe2f1] flex items-center justify-between gap-2 w-full text-left transition-colors cursor-pointer"
+                              >
+                                <span className="truncate">
+                                  {char.name} (C{char.constellation} • {char.element})
+                                </span>
+                                <ChevronDown
+                                  className={`w-3.5 h-3.5 text-[#99907c] shrink-0 transition-transform ${
+                                    isPickerOpen ? "rotate-180" : ""
+                                  }`}
+                                />
+                              </button>
+                              <span className="text-[10px] font-mono text-[#99907c] shrink-0">
+                                SLOT 0{idx + 1}
+                              </span>
+                            </div>
+
+                            {/* Searchable Combobox Popover */}
+                            {isPickerOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-40"
+                                  onClick={() => {
+                                    setActiveSlotPickerIdx(null);
+                                    setSlotSearchQuery("");
+                                  }}
+                                />
+                                <div className="absolute left-0 top-full mt-1.5 w-full min-w-[280px] rounded-xl bg-[#131a2a] border border-[#d4af37]/40 shadow-2xl p-2.5 z-50 space-y-2">
+                                  {/* Sticky Search Header */}
+                                  <div className="relative">
+                                    <Search className="w-3.5 h-3.5 text-[#99907c] absolute left-2.5 top-1/2 -translate-y-1/2" />
+                                    <input
+                                      type="text"
+                                      autoFocus
+                                      value={slotSearchQuery}
+                                      onChange={(e) => setSlotSearchQuery(e.target.value)}
+                                      placeholder="Search character or element..."
+                                      className="w-full pl-8 pr-7 py-1.5 rounded-lg bg-[#0a0e18] border border-white/15 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
+                                    />
+                                    {slotSearchQuery && (
+                                      <button
+                                        type="button"
+                                        onClick={() => setSlotSearchQuery("")}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#99907c] hover:text-[#dfe2f1] cursor-pointer"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  {/* Filtered Character List */}
+                                  <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+                                    {filteredRoster.length === 0 ? (
+                                      <div className="p-3 text-center text-xs text-[#99907c]">
+                                        No characters match &ldquo;{slotSearchQuery}&rdquo;
+                                      </div>
+                                    ) : (
+                                      filteredRoster.map((opt) => {
+                                        const partySlotIdx = party.findIndex(
+                                          (p) => p.name === opt.name
+                                        );
+                                        const isCurrentSlot = partySlotIdx === idx;
+                                        const isOtherSlot =
+                                          partySlotIdx !== -1 && !isCurrentSlot;
+
+                                        return (
+                                          <button
+                                            key={opt.avatarId}
+                                            type="button"
+                                            onClick={() => {
+                                              handleSlotChange(idx, opt.name);
+                                              setActiveSlotPickerIdx(null);
+                                              setSlotSearchQuery("");
+                                            }}
+                                            className={`w-full p-2 rounded-lg text-left text-xs transition-colors flex items-center justify-between gap-2 cursor-pointer ${
+                                              isCurrentSlot
+                                                ? "bg-[#d4af37]/15 border border-[#d4af37]/40 text-[#f2ca50]"
+                                                : "bg-[#0a0e18] hover:bg-[#1a2236] border border-white/10 hover:border-white/20 text-[#dfe2f1]"
+                                            }`}
+                                          >
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              <ElementBadge element={opt.element} compact />
+                                              <span className="font-semibold truncate">
+                                                {opt.name}
+                                              </span>
+                                              <span className="text-[10px] font-mono text-[#99907c] shrink-0">
+                                                C{opt.constellation}
+                                              </span>
+                                            </div>
+
+                                            <div className="shrink-0 flex items-center gap-1">
+                                              {isCurrentSlot ? (
+                                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#d4af37]/25 text-[#f2ca50] font-bold">
+                                                  ACTIVE
+                                                </span>
+                                              ) : isOtherSlot ? (
+                                                <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[#00b4d8]/15 border border-[#00b4d8]/30 text-[#4cd6fb]">
+                                                  SWAP SLOT 0{partySlotIdx + 1}
+                                                </span>
+                                              ) : null}
+                                            </div>
+                                          </button>
+                                        );
+                                      })
+                                    )}
+                                  </div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-[10px] font-mono text-[#d0c5af] tabular-nums">
+                            <ElementBadge element={char.element} compact />
+                            <span className="truncate">{char.weapon.name}</span>
+                            <span className="text-[#4cd6fb] ml-auto shrink-0">
+                              ER {char.stats.er.toFixed(0)}%
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
 

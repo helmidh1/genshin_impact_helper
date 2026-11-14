@@ -10,6 +10,7 @@ import type {
   CoachingFocus,
   EncounterPreset,
   EquipmentCoachQueryResponse,
+  SavedPartySetup,
   ShowcaseCharacter,
 } from "@/types/genshin";
 
@@ -636,4 +637,43 @@ export function getPlayableMetaTeams(
   return META_TEAM_PRESETS.filter((preset) =>
     preset.characterNames.every((name) => rosterNames.has(name))
   );
+}
+
+export function filterSavedParties(
+  parties: SavedPartySetup[],
+  query: string
+): SavedPartySetup[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return parties;
+  return parties.filter((p) => {
+    if (p.name.toLowerCase().includes(trimmed)) return true;
+    return p.characterNames.some((c) => c.toLowerCase().includes(trimmed));
+  });
+}
+
+export function filterMetaTeamPresets(
+  presets: MetaTeamPreset[],
+  query: string
+): MetaTeamPreset[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return presets;
+  return presets.filter((preset) => {
+    if (preset.name.toLowerCase().includes(trimmed)) return true;
+    if (preset.archetype.toLowerCase().includes(trimmed)) return true;
+    if (preset.description.toLowerCase().includes(trimmed)) return true;
+    return preset.characterNames.some((c) => c.toLowerCase().includes(trimmed));
+  });
+}
+
+export function filterRosterCharacters(
+  roster: ShowcaseCharacter[],
+  query: string
+): ShowcaseCharacter[] {
+  const trimmed = query.trim().toLowerCase();
+  if (!trimmed) return roster;
+  return roster.filter((char) => {
+    if (char.name.toLowerCase().includes(trimmed)) return true;
+    if (char.element.toLowerCase().includes(trimmed)) return true;
+    return false;
+  });
 }
