@@ -25,6 +25,7 @@
 | `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, delegating fallback heuristics directly to `CoachEngine`. |
 | `src/lib/profile-store.ts` | Reactive client-side `ProfileStore` (`teyvat_strategist_store_v2`) with `useSyncExternalStore`, intent actions, resin recovery reconciliation, and legacy `_v1` migration. |
 | `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore` and resin reconciliation (14 tests via Vitest). |
+| `src/lib/test-fixtures.ts` | Centralized test fixture builders (`createMockCharacter`, `createMockArtifacts`, `createMockEncounter`, `MemoryStorageAdapter`) ensuring domain interface fidelity by construction. |
 | `src/lib/demo-data.ts` | Built-in demo traveler profile (`DEMO_TRAVELER_PROFILE`), default daily directives (`DEFAULT_DIRECTIVES`), and encounter/boss presets (`ENCOUNTER_PRESETS`). |
 | `src/lib/elements.ts` | Elemental theme colors/icons (`ELEMENT_THEMES`) and party resonance calculations (`computeResonances`). |
 | `src/types/genshin.ts` | Central TypeScript domain types (`TravelerProfile`, `ShowcaseCharacter`, `ArtifactPiece`, `CoachStrategyResponse`, `RawArtifactInput`, `BuildEvaluationResult`, `ProfileState`, etc.). |

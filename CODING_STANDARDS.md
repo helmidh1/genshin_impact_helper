@@ -20,7 +20,7 @@ Rules and conventions enforced during code review (`/code-review`). Reviewer age
 - **Centralized Types**: Shared domain interfaces, union types, and DTOs belong in `src/types/genshin.ts`.
   - Import types with `import type { ... } from "@/types/genshin"`.
   - Do not declare shared domain types across ad-hoc utility files.
-- **Test Fixture Fidelity**: Test fixtures, mocks, and character generators must strictly satisfy domain interfaces (e.g. `ShowcaseCharacter`, `BuildArchetype`, `WeaponRecommendationTier`). Do not mock complex typed fields (such as `talents: { normal, skill, burst }`) with loose placeholders or empty arrays.
+- **Test Fixture Fidelity & Canonical Builders**: Test fixtures, mocks, and character generators must strictly satisfy domain interfaces (e.g. `ShowcaseCharacter`, `BuildArchetype`, `WeaponRecommendationTier`). Tests must import canonical builders from `src/lib/test-fixtures.ts` (`createMockCharacter`, `createMockArtifacts`, `createMockEncounter`, `MemoryStorageAdapter`) rather than declaring ad-hoc partial mocks or empty arrays, ensuring fidelity by construction.
 
 ## 3. Server & Client Boundaries
 

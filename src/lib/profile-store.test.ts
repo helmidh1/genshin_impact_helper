@@ -3,29 +3,9 @@ import { DEFAULT_DIRECTIVES, DEMO_TRAVELER_PROFILE } from "@/lib/demo-data";
 import {
   createProfileStore,
   reconcileResinDirectives,
-  type StorageAdapter,
 } from "@/lib/profile-store";
+import { MemoryStorageAdapter } from "@/lib/test-fixtures";
 import type { DailyDirectives, TravelerProfile } from "@/types/genshin";
-
-class MemoryStorageAdapter implements StorageAdapter {
-  private store = new Map<string, string>();
-
-  getItem(key: string): string | null {
-    return this.store.get(key) ?? null;
-  }
-
-  setItem(key: string, value: string): void {
-    this.store.set(key, value);
-  }
-
-  removeItem(key: string): void {
-    this.store.delete(key);
-  }
-
-  clear(): void {
-    this.store.clear();
-  }
-}
 
 describe("ProfileStore - Core State & Profiles", () => {
   it("initializes with demo profile when storage is empty", () => {

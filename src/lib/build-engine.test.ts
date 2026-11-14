@@ -16,6 +16,11 @@ import type {
   CharacterStats,
   ShowcaseCharacter,
 } from "@/types/genshin";
+import {
+  createMockArtifacts,
+  createMockCharacter,
+  createMockWeapon,
+} from "@/lib/test-fixtures";
 
 describe("build-engine: CV and Roll Tier calculations", () => {
   it("calculates Crit Value accurately as CR * 2 + CD", () => {
@@ -390,47 +395,33 @@ describe("build-engine: compareEquippedWithRecommendations", () => {
     sands = "ATK%",
     goblet = "Pyro DMG Bonus",
     circlet = "CRIT Rate"
-  ): ShowcaseCharacter => ({
-    avatarId: 10000096,
-    name: "Arlecchino",
-    title: "The Knave",
-    element: "Pyro",
-    level: 90,
-    maxLevel: 90,
-    friendship: 10,
-    constellation: 0,
-    talents: { normal: 10, skill: 10, burst: 10 },
-    stats: {
-      maxHp: 21000,
-      atk: 2200,
-      baseAtk: 910,
-      def: 800,
-      em: 80,
-      critRate: 78.0,
-      critDmg: 165.0,
-      er,
-    },
-    weapon: {
-      name: weaponName,
-      rarity: weaponName === "Deathmatch" ? 4 : 5,
-      level: 90,
-      refinement: 1,
-      baseAtk: 674,
-      subStatLabel: "CRIT Rate",
-      subStatValue: "22.1%",
-      passiveSummary: "Passive effect",
-    },
-    artifacts: [
-      { slot: "Flower", name: "Flower", setName: setNames[0] || "Gladiator's Finale", rarity: 5, level: 20, mainStatLabel: "HP", mainStatValue: "4780", critValue: 35, tier: "SS", substats: [] },
-      { slot: "Plume", name: "Plume", setName: setNames[1] || "Gladiator's Finale", rarity: 5, level: 20, mainStatLabel: "ATK", mainStatValue: "311", critValue: 32, tier: "S", substats: [] },
-      { slot: "Sands", name: "Sands", setName: setNames[2] || "Gladiator's Finale", rarity: 5, level: 20, mainStatLabel: sands, mainStatValue: "46.6%", critValue: 28, tier: "S", substats: [] },
-      { slot: "Goblet", name: "Goblet", setName: setNames[3] || "Gladiator's Finale", rarity: 5, level: 20, mainStatLabel: goblet, mainStatValue: "46.6%", critValue: 30, tier: "S", substats: [] },
-      { slot: "Circlet", name: "Circlet", setName: setNames[4] || "Gladiator's Finale", rarity: 5, level: 20, mainStatLabel: circlet, mainStatValue: "31.1%", critValue: 24, tier: "A", substats: [] },
-    ],
-    artifactSets: tallyArtifactSets(setNames),
-    totalCv: 149,
-    buildTier: "A Tier",
-  });
+  ): ShowcaseCharacter =>
+    createMockCharacter("Arlecchino", "Pyro", {
+      avatarId: 10000096,
+      title: "The Knave",
+      talents: { normal: 10, skill: 10, burst: 10 },
+      stats: {
+        maxHp: 21000,
+        atk: 2200,
+        baseAtk: 910,
+        def: 800,
+        em: 80,
+        critRate: 78.0,
+        critDmg: 165.0,
+        er,
+      },
+      weapon: createMockWeapon(weaponName, {
+        rarity: weaponName === "Deathmatch" ? 4 : 5,
+        baseAtk: 674,
+        subStatLabel: "CRIT Rate",
+        subStatValue: "22.1%",
+        passiveSummary: "Passive effect",
+      }),
+      artifacts: createMockArtifacts(setNames, { sands, goblet, circlet }),
+      artifactSets: tallyArtifactSets(setNames),
+      totalCv: 149,
+      buildTier: "A Tier",
+    });
 
   it("identifies signature weapon and full 4-piece set match", () => {
     const char = createDummyCharacter(

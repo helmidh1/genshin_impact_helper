@@ -5,78 +5,9 @@ import {
   recommendedErFor,
   summarizeParty,
 } from "./coach-engine";
-import type {
-  ElementType,
-  EncounterPreset,
-  ShowcaseCharacter,
-} from "@/types/genshin";
+import { createMockCharacter, createMockEncounter } from "@/lib/test-fixtures";
 
-function createMockCharacter(
-  name: string,
-  element: ElementType,
-  overrides?: Partial<ShowcaseCharacter>
-): ShowcaseCharacter {
-  return {
-    avatarId: 10000000 + Math.floor(Math.random() * 999999),
-    name,
-    element,
-    level: 90,
-    maxLevel: 90,
-    constellation: 0,
-    friendship: 10,
-    talents: { normal: 8, skill: 8, burst: 8 },
-    weapon: {
-      name: "Iron Sting",
-      level: 90,
-      refinement: 1,
-      rarity: 4,
-      baseAtk: 510,
-      subStatLabel: "Elemental Mastery",
-      subStatValue: "165",
-      passiveSummary: "Inflicting Elemental DMG increases all DMG by 6% for 6s.",
-    },
-    artifactSets: [
-      {
-        name: "Noblesse Oblige",
-        count: 4,
-        bonusSummary: "Using an Elemental Burst increases all party members' ATK by 20% for 12s.",
-      },
-    ],
-    artifacts: [
-      { slot: "Flower", name: "Flower of Life", setName: "Noblesse Oblige", rarity: 5, level: 20, mainStatLabel: "HP", mainStatValue: "4780", critValue: 35.0, tier: "SS", substats: [] },
-      { slot: "Plume", name: "Plume of Death", setName: "Noblesse Oblige", rarity: 5, level: 20, mainStatLabel: "ATK", mainStatValue: "311", critValue: 32.0, tier: "S", substats: [] },
-      { slot: "Sands", name: "Sands of Eon", setName: "Noblesse Oblige", rarity: 5, level: 20, mainStatLabel: "ATK%", mainStatValue: "46.6%", critValue: 28.0, tier: "S", substats: [] },
-      { slot: "Goblet", name: "Goblet of Eonothem", setName: "Noblesse Oblige", rarity: 5, level: 20, mainStatLabel: "Elemental DMG", mainStatValue: "46.6%", critValue: 30.0, tier: "S", substats: [] },
-      { slot: "Circlet", name: "Circlet of Logos", setName: "Noblesse Oblige", rarity: 5, level: 20, mainStatLabel: "CRIT Rate", mainStatValue: "31.1%", critValue: 24.0, tier: "A", substats: [] },
-    ],
-    stats: {
-      maxHp: 20000,
-      atk: 1500,
-      def: 800,
-      em: 100,
-      critRate: 60.0,
-      critDmg: 120.0,
-      er: 180.0,
-    },
-    totalCv: 180.0,
-    buildTier: "S Tier",
-    ...overrides,
-  };
-}
-
-const mockEncounter: EncounterPreset = {
-  id: "abyss-12-1-pma",
-  name: "Perpetual Mechanical Array",
-  location: "Spiral Abyss Floor 12 Chamber 1",
-  level: 100,
-  hpLabel: "2,200,000 HP",
-  resistances: [
-    { label: "Phys", value: "70%" },
-    { label: "Pyro", value: "10%", element: "Pyro" },
-    { label: "Hydro", value: "10%", element: "Hydro" },
-  ],
-  mechanicsAlert: "Vulnerability State: Drops -50% all RES for 20s after defeating ruin minion.",
-};
+const mockEncounter = createMockEncounter();
 
 describe("CoachEngine: Energy Recharge (ER) Diagnostics", () => {
   it("determines correct base ER targets for specific characters", () => {
