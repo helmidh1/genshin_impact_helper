@@ -8,6 +8,10 @@ Teyvat Strategist is a combat diagnostics, build inspection, and tactical coachi
 The core theorycraft evaluation domain module that computes artifact roll quality, set bonuses, and meta build alignment.
 _Avoid_: Evaluator, rater, grading service, calculator
 
+**Profile Store**:
+The centralized client-side domain module responsible for local state persistence, schema migration, resin recovery reconciliation, and reactive UI subscriptions.
+_Avoid_: Storage helper, cache manager, local storage wrapper, state manager
+
 **Crit Value (CV)**:
 A standardized theorycraft metric calculating an artifact or character's critical hit investment (`CRIT Rate × 2 + CRIT DMG`).
 _Avoid_: Crit score, damage score, crit ratio

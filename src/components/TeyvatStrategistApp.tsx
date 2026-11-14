@@ -8,35 +8,11 @@ import { HoyolabSyncModal } from "@/components/HoyolabSyncModal";
 import { OverviewTab } from "@/components/OverviewTab";
 import { ShowcaseTab } from "@/components/ShowcaseTab";
 import { TopNavBar, type AppTab } from "@/components/TopNavBar";
-import {
-  DEFAULT_DIRECTIVES,
-  DEMO_TRAVELER_PROFILE,
-  ENCOUNTER_PRESETS,
-} from "@/lib/demo-data";
+import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { ELEMENT_THEMES } from "@/lib/elements";
-import {
-  clearCheckinState,
-  clearHoyolabCredentials,
-  getHoyolabUtc8Date,
-  loadActiveUid,
-  loadCoachChat,
-  loadDirectives,
-  loadSavedCheckinState,
-  loadSavedCoachStrategy,
-  loadSavedHoyolabCredentials,
-  loadSavedPartyNames,
-  loadSavedProfiles,
-  reconcileResinDirectives,
-  removeProfile,
-  saveActiveUid,
-  saveCheckinState,
-  saveCoachChat,
-  saveCoachStrategy,
-  saveDirectives,
-  saveHoyolabCredentials,
-  savePartyNames,
-  saveProfile,
-} from "@/lib/storage";
+import { getHoyolabUtc8Date } from "@/lib/hoyolab-checkin";
+import { profileStore } from "@/lib/profile-store";
+import { useProfileStore } from "@/lib/use-profile-store";
 import type {
   CoachFollowUpMessage,
   CoachStrategyResponse,
@@ -134,11 +110,8 @@ function createInitialPreviewStrategy(
 }
 
 export function TeyvatStrategistApp() {
+  const storeState = useProfileStore();
   const [activeTab, setActiveTab] = useState<AppTab>("overview");
-  const [savedProfiles, setSavedProfiles] = useState<TravelerProfile[]>([
-    DEMO_TRAVELER_PROFILE,
-  ]);
-  const [activeUid, setActiveUid] = useState<string>(DEMO_TRAVELER_PROFILE.uid);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [hoyolabModalOpen, setHoyolabModalOpen] = useState(false);
   const [isHoyolabSyncing, setIsHoyolabSyncing] = useState(false);
@@ -146,37 +119,22 @@ export function TeyvatStrategistApp() {
   const [envHoyolabConfigured, setEnvHoyolabConfigured] = useState(false);
   const [savedHoyolabCreds, setSavedHoyolabCreds] =
     useState<HoyolabCredentialsPayload | null>(null);
-  const [checkinState, setCheckinState] =
-    useState<HoyolabCheckinState | null>(null);
   const [isCheckinBusy, setIsCheckinBusy] = useState(false);
   const [checkinError, setCheckinError] = useState<string | null>(null);
-  const [directives, setDirectives] =
-    useState<DailyDirectives>(DEFAULT_DIRECTIVES);
-  const [selectedAvatarId, setSelectedAvatarId] = useState<number>(
-    DEMO_TRAVELER_PROFILE.characters[0]?.avatarId ?? 0
-  );
-  const [partyNames, setPartyNames] = useState<string[]>(
-    DEMO_TRAVELER_PROFILE.characters.slice(0, 4).map((c) => c.name)
-  );
-  const [strategy, setStrategy] = useState<CoachStrategyResponse>(() =>
-    createInitialPreviewStrategy(DEMO_TRAVELER_PROFILE.characters)
-  );
-  const [chatMessages, setChatMessages] = useState<CoachFollowUpMessage[]>([]);
 
-  const activeProfile =
-    savedProfiles.find((p) => p.uid === activeUid) ??
-    savedProfiles[0] ??
-    DEMO_TRAVELER_PROFILE;
+  const activeProfile = profileStore.getActiveProfile();
+  const directives = profileStore.getDirectives();
+  const partyNames = profileStore.getParty();
+  const strategy =
+    profileStore.getCoachStrategy() ??
+    createInitialPreviewStrategy(activeProfile.characters);
+  const chatMessages = profileStore.getCoachChat();
+  const savedProfiles = storeState.profiles;
+  const checkinState = storeState.checkinState;
 
-  const syncProfileContext = (profile: TravelerProfile) => {
-    const defaultParty = profile.characters.slice(0, 4).map((c) => c.name);
-    setSelectedAvatarId(profile.characters[0]?.avatarId ?? 0);
-    setPartyNames(loadSavedPartyNames(profile.uid, defaultParty));
-    setDirectives(loadDirectives(profile.uid));
-    const savedStrategy = loadSavedCoachStrategy(profile.uid);
-    setStrategy(savedStrategy ?? createInitialPreviewStrategy(profile.characters));
-    setChatMessages(loadCoachChat(profile.uid));
-  };
+  const [selectedAvatarId, setSelectedAvatarId] = useState<number>(() => {
+    return activeProfile.characters[0]?.avatarId ?? 0;
+  });
 
   const runCheckin = async (
     action: HoyolabCheckinAction,
@@ -188,8 +146,7 @@ export function TeyvatStrategistApp() {
     setCheckinError(null);
     try {
       const next = await postHoyolabCheckin(action, credsToUse);
-      setCheckinState(next);
-      saveCheckinState(next);
+      profileStore.saveCheckinState(next);
     } catch (err) {
       setCheckinError(
         err instanceof Error
@@ -245,29 +202,23 @@ export function TeyvatStrategistApp() {
         (payload.cookieString?.trim() ||
           (payload.ltuid?.trim() && payload.ltoken?.trim()))
       ) {
-        saveHoyolabCredentials(payload);
+        profileStore.saveHoyolabCredentials(payload);
         setSavedHoyolabCreds(payload);
       }
 
-      const nextProfiles = saveProfile(data.profile);
-      setSavedProfiles(nextProfiles);
-      setActiveUid(data.profile.uid);
+      profileStore.saveProfile(data.profile);
 
       if (data.profile.characters.length > 0) {
         const defaultParty = data.profile.characters
           .slice(0, 4)
           .map((c) => c.name);
-        const existingParty = loadSavedPartyNames(
-          data.profile.uid,
-          defaultParty
-        );
+        const existingParty = profileStore.getParty(data.profile.uid);
         const rosterNames = new Set(
           data.profile.characters.map((c) => c.name)
         );
         const validParty = existingParty.filter((n) => rosterNames.has(n));
         const nextParty = validParty.length >= 2 ? validParty : defaultParty;
-        setPartyNames(nextParty);
-        savePartyNames(data.profile.uid, nextParty);
+        profileStore.setParty(data.profile.uid, nextParty);
 
         setSelectedAvatarId((prevId) =>
           data.profile.characters.some((c) => c.avatarId === prevId)
@@ -276,22 +227,13 @@ export function TeyvatStrategistApp() {
         );
 
         const preview = createInitialPreviewStrategy(data.profile.characters);
-        setStrategy(preview);
-        saveCoachStrategy(data.profile.uid, preview);
-      } else {
-        syncProfileContext(data.profile);
+        profileStore.saveCoachStrategy(data.profile.uid, preview);
       }
 
       if (data.liveDirectives) {
-        setDirectives((prev) => {
-          const merged: DailyDirectives = {
-            ...prev,
-            ...data.liveDirectives,
-            source: "hoyolab",
-            lastUpdatedAt: new Date().toISOString(),
-          };
-          saveDirectives(merged, false, data.profile.uid);
-          return merged;
+        profileStore.updateDirectives(data.profile.uid, {
+          ...data.liveDirectives,
+          source: "hoyolab",
         });
       }
 
@@ -348,40 +290,19 @@ export function TeyvatStrategistApp() {
 
   useEffect(() => {
     let active = true;
-    let loadedCreds: HoyolabCredentialsPayload | null = null;
-    let cachedCheckin: HoyolabCheckinState | null = null;
 
     Promise.resolve().then(() => {
       if (!active) return;
-      const profiles = loadSavedProfiles();
-      const uid = loadActiveUid();
-      const current =
-        profiles.find((p) => p.uid === uid) ??
-        profiles[0] ??
-        DEMO_TRAVELER_PROFILE;
-      const defaultParty = current.characters.slice(0, 4).map((c) => c.name);
-      setSavedProfiles(profiles);
-      setActiveUid(current.uid);
-      setDirectives(loadDirectives(current.uid));
-
-      loadedCreds = loadSavedHoyolabCredentials();
+      const loadedCreds = profileStore.loadHoyolabCredentials();
       setSavedHoyolabCreds(loadedCreds);
 
-      cachedCheckin = loadSavedCheckinState();
-      if (cachedCheckin && cachedCheckin.utc8Date === getHoyolabUtc8Date()) {
-        setCheckinState(cachedCheckin);
+      const cachedCheckin = profileStore.getState().checkinState;
+      if (cachedCheckin && cachedCheckin.utc8Date !== getHoyolabUtc8Date()) {
+        profileStore.clearCheckinState();
       }
 
-      setPartyNames(loadSavedPartyNames(current.uid, defaultParty));
-      setSelectedAvatarId(current.characters[0]?.avatarId ?? 0);
-
-      const savedStrategy = loadSavedCoachStrategy(current.uid);
-      if (savedStrategy) {
-        setStrategy(savedStrategy);
-      } else {
-        setStrategy(createInitialPreviewStrategy(current.characters));
-      }
-      setChatMessages(loadCoachChat(current.uid));
+      const curr = profileStore.getActiveProfile();
+      setSelectedAvatarId(curr.characters[0]?.avatarId ?? 0);
     });
 
     fetch("/api/hoyolab")
@@ -392,16 +313,11 @@ export function TeyvatStrategistApp() {
         const envConfigured = Boolean(data?.envConfigured);
         setEnvHoyolabConfigured(envConfigured);
 
-        const effectiveCreds = loadedCreds ?? loadSavedHoyolabCredentials();
+        const effectiveCreds = profileStore.loadHoyolabCredentials();
         const credsAvailable =
           hasHoyolabCredValues(effectiveCreds) || envConfigured;
 
-        const profiles = loadSavedProfiles();
-        const activeUidVal = loadActiveUid();
-        const currentProfile =
-          profiles.find((p) => p.uid === activeUidVal) ??
-          profiles[0] ??
-          DEMO_TRAVELER_PROFILE;
+        const currentProfile = profileStore.getActiveProfile();
 
         if (credsAvailable) {
           const targetUid =
@@ -422,9 +338,7 @@ export function TeyvatStrategistApp() {
             if (res.ok) {
               const refreshed = (await res.json()) as TravelerProfile;
               if (active) {
-                const nextProfiles = saveProfile(refreshed);
-                setSavedProfiles(nextProfiles);
-                syncProfileContext(refreshed);
+                profileStore.saveProfile(refreshed);
               }
             }
           } catch {
@@ -443,78 +357,48 @@ export function TeyvatStrategistApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setDirectives((prev) => {
-        const next = reconcileResinDirectives(prev);
-        if (next.resin !== prev.resin) {
-          saveDirectives(next, true);
-        }
-        return next;
-      });
-    }, 60_000);
-    return () => clearInterval(timer);
-  }, []);
-
   const handleOpenHoyolabModal = () => {
     setHoyolabError(null);
     setHoyolabModalOpen(true);
   };
 
   const handleClearSavedHoyolabCreds = () => {
-    clearHoyolabCredentials();
-    clearCheckinState();
+    profileStore.clearHoyolabCredentials();
+    profileStore.clearCheckinState();
     setSavedHoyolabCreds(null);
     setCheckinError(null);
     if (envHoyolabConfigured) {
       void runCheckin("ensure", {});
-    } else {
-      setCheckinState(null);
     }
   };
 
   const handleSwitchProfile = (uid: string) => {
-    const found = savedProfiles.find((p) => p.uid === uid);
-    if (!found) return;
-    setActiveUid(uid);
-    saveActiveUid(uid);
+    profileStore.setActiveUid(uid);
     setSyncError(null);
-    syncProfileContext(found);
+    const target = profileStore.getActiveProfile();
+    setSelectedAvatarId(target.characters[0]?.avatarId ?? 0);
   };
 
   const handleRemoveProfile = (uid: string) => {
-    const next = removeProfile(uid);
-    setSavedProfiles(next);
-    const nextActive = next[0];
-    setActiveUid(nextActive.uid);
-    syncProfileContext(nextActive);
+    profileStore.removeProfile(uid);
+    const target = profileStore.getActiveProfile();
+    setSelectedAvatarId(target.characters[0]?.avatarId ?? 0);
   };
 
   const handleUpdateDirectives = (next: DailyDirectives) => {
-    const resinChanged = next.resin !== directives.resin;
-    const stamped = {
-      ...next,
-      lastUpdatedAt: resinChanged
-        ? new Date().toISOString()
-        : next.lastUpdatedAt,
-    };
-    setDirectives(stamped);
-    saveDirectives(stamped, !resinChanged);
+    profileStore.updateDirectives(activeProfile.uid, next);
   };
 
   const handleChangePartyNames = (names: string[]) => {
-    setPartyNames(names);
-    savePartyNames(activeProfile.uid, names);
+    profileStore.setParty(activeProfile.uid, names);
   };
 
   const handleUpdateStrategy = (next: CoachStrategyResponse) => {
-    setStrategy(next);
-    saveCoachStrategy(activeProfile.uid, next);
+    profileStore.saveCoachStrategy(activeProfile.uid, next);
   };
 
   const handleUpdateChat = (next: CoachFollowUpMessage[]) => {
-    setChatMessages(next);
-    saveCoachChat(activeProfile.uid, next);
+    profileStore.setCoachChat(activeProfile.uid, next);
   };
 
   return (

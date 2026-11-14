@@ -1,11 +1,18 @@
 import { resolveHoyolabAuth, type HoyolabAuthConfig } from "@/lib/hoyolab";
-import { getHoyolabUtc8Date } from "@/lib/storage";
 import type {
   HoyolabCheckinAction,
   HoyolabCheckinAward,
   HoyolabCheckinRequest,
   HoyolabCheckinState,
 } from "@/types/genshin";
+
+export function getHoyolabUtc8Date(now = new Date()): string {
+  const utc8 = new Date(now.getTime() + 8 * 60 * 60 * 1000);
+  const year = utc8.getUTCFullYear();
+  const month = String(utc8.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(utc8.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
 
 const GENSHIN_CHECKIN_ACT_ID = "e202102251931481";
 const GENSHIN_CHECKIN_BASE = "https://sg-hk4e-api.hoyolab.com/event/sol";

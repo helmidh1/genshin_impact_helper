@@ -408,3 +408,16 @@ export interface EquipmentCoachQueryResponse {
   interactionId?: string;
 }
 
+export interface ProfileState {
+  version: 2;
+  activeUid: string;
+  profiles: TravelerProfile[];
+  directivesByUid: Record<string, DailyDirectives>;
+  partyByUid: Record<string, string[]>;
+  coachStrategyByUid: Record<string, CoachStrategyResponse | null>;
+  coachChatByUid: Record<string, CoachFollowUpMessage[]>;
+  checkinState: HoyolabCheckinState | null;
+  equipmentAdviceByChar: Record<string, EquipmentCoachQueryResponse>;
+}
+
+

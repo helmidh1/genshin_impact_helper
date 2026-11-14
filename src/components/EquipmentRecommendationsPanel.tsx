@@ -21,11 +21,7 @@ import {
   getMainStatsForArtifactSet,
   getWeaponsForArtifactSet,
 } from "@/lib/equipment-data";
-import {
-  loadSavedEquipmentAdvice,
-  loadSavedGeminiApiKey,
-  saveEquipmentAdvice,
-} from "@/lib/storage";
+import { profileStore } from "@/lib/profile-store";
 import type {
   EquipmentCoachQueryResponse,
   ShowcaseCharacter,
@@ -64,8 +60,7 @@ export function EquipmentRecommendationsPanel({
   const [isAsking, setIsAsking] = useState(false);
   const [coachResponse, setCoachResponse] =
     useState<EquipmentCoachQueryResponse | null>(() =>
-      loadSavedEquipmentAdvice(character.avatarId) ??
-      loadSavedEquipmentAdvice(character.name)
+      profileStore.getEquipmentAdvice(character.avatarId, character.name)
     );
   const [coachError, setCoachError] = useState<string | null>(null);
 
@@ -76,8 +71,7 @@ export function EquipmentRecommendationsPanel({
     setQuestionInput("");
     setCoachError(null);
     setCoachResponse(
-      loadSavedEquipmentAdvice(character.avatarId) ??
-      loadSavedEquipmentAdvice(character.name)
+      profileStore.getEquipmentAdvice(character.avatarId, character.name)
     );
   }
 
@@ -105,7 +99,7 @@ export function EquipmentRecommendationsPanel({
     setIsAsking(true);
     setCoachError(null);
 
-    const savedKey = loadSavedGeminiApiKey();
+    const savedKey = profileStore.loadGeminiApiKey();
 
     try {
       const res = await fetch("/api/coach", {
@@ -130,7 +124,7 @@ export function EquipmentRecommendationsPanel({
       }
 
       setCoachResponse(data);
-      saveEquipmentAdvice(character.avatarId, data, character.name);
+      profileStore.saveEquipmentAdvice(character.avatarId, data, character.name);
       if (!queryText) {
         setQuestionInput("");
       }

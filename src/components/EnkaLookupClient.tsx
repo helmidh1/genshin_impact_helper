@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertCircle,
   ArrowLeft,
@@ -15,33 +15,22 @@ import {
   Users,
 } from "lucide-react";
 import { ShowcaseTab } from "@/components/ShowcaseTab";
-import { loadSavedProfiles, saveProfile } from "@/lib/storage";
+import { profileStore } from "@/lib/profile-store";
+import { useProfileStore } from "@/lib/use-profile-store";
 import type { TravelerProfile } from "@/types/genshin";
 
 export function EnkaLookupClient() {
+  const { profiles } = useProfileStore();
+  const savedEnkaProfiles = profiles.filter((p) => p.source === "enka");
+
   const [uidInput, setUidInput] = useState("");
-  const [profile, setProfile] = useState<TravelerProfile | null>(null);
-  const [savedEnkaProfiles, setSavedEnkaProfiles] = useState<TravelerProfile[]>([]);
+  const [queriedProfile, setQueriedProfile] = useState<TravelerProfile | null>(null);
+  const profile = queriedProfile ?? savedEnkaProfiles[0] ?? null;
+
   const [selectedAvatarId, setSelectedAvatarId] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedToast, setSavedToast] = useState(false);
-
-  useEffect(() => {
-    let active = true;
-    Promise.resolve().then(() => {
-      if (!active) return;
-      const enkaSaved = loadSavedProfiles().filter((p) => p.source === "enka");
-      setSavedEnkaProfiles(enkaSaved);
-      if (enkaSaved[0]) {
-        setProfile(enkaSaved[0]);
-        setSelectedAvatarId(enkaSaved[0].characters[0]?.avatarId ?? 0);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const fetchUid = async (uid: string) => {
     const cleanUid = uid.trim();
@@ -55,7 +44,7 @@ export function EnkaLookupClient() {
       if (!res.ok) {
         throw new Error(data.error ?? "Failed to fetch Enka.Network showcase.");
       }
-      setProfile(data);
+      setQueriedProfile(data);
       setSelectedAvatarId(data.characters[0]?.avatarId ?? 0);
     } catch (err) {
       setError(
@@ -75,8 +64,7 @@ export function EnkaLookupClient() {
 
   const handleSaveToHub = () => {
     if (!profile) return;
-    const next = saveProfile(profile);
-    setSavedEnkaProfiles(next.filter((p) => p.source === "enka"));
+    profileStore.saveProfile(profile);
     setSavedToast(true);
   };
 
@@ -176,7 +164,7 @@ export function EnkaLookupClient() {
                   key={p.uid}
                   type="button"
                   onClick={() => {
-                    setProfile(p);
+                    setQueriedProfile(p);
                     setSelectedAvatarId(p.characters[0]?.avatarId ?? 0);
                     setError(null);
                     setSavedToast(false);

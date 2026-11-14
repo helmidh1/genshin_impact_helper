@@ -21,10 +21,11 @@
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API client (`generateCoachStrategy`, `askCoachFollowUp`), JSON schema enforcement, and deterministic local heuristics fallback (`buildFallbackStrategy`). |
-| `src/lib/storage.ts` | Browser `localStorage` persistence (`teyvat_strategist_*_v1` keys) for saved UID profiles (capped at 8), active UID, daily directives/resin, party roster, coach strategy, and chat history (capped at 20 messages). |
+| `src/lib/profile-store.ts` | Reactive client-side `ProfileStore` (`teyvat_strategist_store_v2`) with `useSyncExternalStore`, intent actions, resin recovery reconciliation, and legacy `_v1` migration. |
+| `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore` and resin reconciliation (14 tests via Vitest). |
 | `src/lib/demo-data.ts` | Built-in demo traveler profile (`DEMO_TRAVELER_PROFILE`), default daily directives (`DEFAULT_DIRECTIVES`), and encounter/boss presets (`ENCOUNTER_PRESETS`). |
 | `src/lib/elements.ts` | Elemental theme colors/icons (`ELEMENT_THEMES`) and party resonance calculations (`computeResonances`). |
-| `src/types/genshin.ts` | Central TypeScript domain types (`TravelerProfile`, `ShowcaseCharacter`, `ArtifactPiece`, `CoachStrategyResponse`, `RawArtifactInput`, `BuildEvaluationResult`, etc.). |
+| `src/types/genshin.ts` | Central TypeScript domain types (`TravelerProfile`, `ShowcaseCharacter`, `ArtifactPiece`, `CoachStrategyResponse`, `RawArtifactInput`, `BuildEvaluationResult`, `ProfileState`, etc.). |
 | `GLOSSARY.md` | Canonical domain language glossary for terms and seams. |
 | `CODING_STANDARDS.md` | Coding standards enforced during `/code-review`. |
 | `public/` | Static SVG assets. |
@@ -32,7 +33,7 @@
 ## 3. Key Guidelines & Constraints
 - **Next.js 16 Breaking Changes (`AGENTS.md`)**: This repository uses Next.js `16.4.6`, which has breaking differences from older Next.js versions (e.g., async route `params` as `Promise<{ ... }>` as seen in `src/app/api/enka/[uid]/route.ts`). Always consult the local docs in `node_modules/next/dist/docs/` before modifying Next.js APIs, routing, or configuration.
 - **Local-First & Graceful Degradation**:
-  - All user state (profiles, directives, active party, strategy, chat) lives in `localStorage` via `src/lib/storage.ts`—do not introduce a database unless requested.
+  - All user state (profiles, directives, active party, strategy, chat) lives in `localStorage` via `src/lib/profile-store.ts`—do not introduce a database unless requested.
   - `GEMINI_API_KEY` is optional. Any AI feature in `src/lib/gemini.ts` or `/api/coach` must continue to fall back cleanly to local heuristics when the key is missing or an API call fails.
 - **Enka.Network Etiquette & Caching**:
   - Keep UID format validation (`9` or `10` digits), `User-Agent` header (`TeyvatStrategist/1.0 (local-next-app)`), and in-memory TTL caching (`uidCache` honoring `data.ttl` with a 60s minimum; 12-hour `metadataCache`) intact in `src/lib/enka.ts`.

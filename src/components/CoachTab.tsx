@@ -22,11 +22,7 @@ import {
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
 import { ENCOUNTER_PRESETS } from "@/lib/demo-data";
 import { computeResonances, ELEMENT_THEMES } from "@/lib/elements";
-import {
-  clearGeminiApiKey,
-  loadSavedGeminiApiKey,
-  saveGeminiApiKey,
-} from "@/lib/storage";
+import { profileStore } from "@/lib/profile-store";
 import type {
   CoachFollowUpMessage,
   CoachStrategyResponse,
@@ -97,7 +93,7 @@ export function CoachTab({
     let active = true;
     Promise.resolve().then(() => {
       if (!active) return;
-      const loaded = loadSavedGeminiApiKey();
+      const loaded = profileStore.loadGeminiApiKey();
       setSavedApiKey(loaded);
       setApiKeyInput(loaded);
     });
@@ -123,14 +119,14 @@ export function CoachTab({
     e.preventDefault();
     const trimmed = apiKeyInput.trim();
     if (!trimmed) return;
-    saveGeminiApiKey(trimmed);
+    profileStore.saveGeminiApiKey(trimmed);
     setSavedApiKey(trimmed);
     setKeySavedFlash(true);
     setTimeout(() => setKeySavedFlash(false), 2000);
   };
 
   const handleClearApiKey = () => {
-    clearGeminiApiKey();
+    profileStore.clearGeminiApiKey();
     setSavedApiKey("");
     setApiKeyInput("");
     setKeySavedFlash(false);
