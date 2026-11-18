@@ -31,6 +31,18 @@ export interface SubstatRoll {
 
 export type ScalingArchetype = "crit-dps" | "hp-support" | "def-scaler" | "em-driver";
 
+export type CombatRole =
+  | "On-Field DPS"
+  | "Off-Field DPS"
+  | "Off-Field Support"
+  | "On-Field Support"
+  | "Off-Field Healer"
+  | "On-Field Healer"
+  | "DPS"
+  | "Sub-DPS"
+  | "Support"
+  | "Healer";
+
 export interface RawSubstatInput {
   id?: string | number;
   propKey?: string;
@@ -144,6 +156,8 @@ export interface ShowcaseCharacter {
     bottleneck: string;
     recommendation: string;
   };
+  roles?: CombatRole[];
+  activeRole?: CombatRole;
 }
 
 export interface TravelerProfile {
@@ -406,6 +420,7 @@ export interface StatBenchmarks {
 export interface BuildArchetype {
   id: string;
   name: string;
+  role?: CombatRole;
   description: string;
   bestWeapons: WeaponRecommendation[];
   bestArtifactSets: ArtifactSetRecommendation[];

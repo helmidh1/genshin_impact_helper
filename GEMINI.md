@@ -17,17 +17,20 @@
 | `src/app/api/coach/route.ts` | `POST` route handling `mode: "strategy"` and `mode: "followup"` requests via `src/lib/gemini.ts`. |
 | `src/components/` | Client UI components (`TeyvatStrategistApp.tsx` root state shell, `TopNavBar.tsx`, `OverviewTab.tsx`, `ShowcaseTab.tsx`, `CoachTab.tsx`, `ElementBadge.tsx`). |
 | `src/lib/build-engine.ts` | Pure domain theorycraft engine (CV calculation, roll tiering, stat weight evaluation, archetype detection, build bottleneck critiques, equipment comparison). Zero I/O. |
-| `src/lib/build-engine.test.ts` | Unit tests for pure domain theorycraft engine (19 tests via Vitest). |
+| `src/lib/build-engine.test.ts` | Unit tests for pure domain theorycraft engine (21 tests via Vitest). |
+| `src/lib/character-roles.ts` | Pure domain combat role engine (catalogs, on-field/off-field heuristics, typical meta role resolution, role matching via `isRoleMatch`). Zero I/O, zero React hooks. |
+| `src/lib/character-roles.test.ts` | Unit tests for combat roles, versatility, and Game8 recommendations (19 tests via Vitest). |
 | `src/lib/coach-engine.ts` | Pure domain theorycraft engine (rotation sequencing, ER benchmarks, buff timelines, party summarization, fallback equipment advice). Zero I/O, zero AI SDK imports, zero React hooks. |
-| `src/lib/coach-engine.test.ts` | Unit tests for CoachEngine (14 tests via Vitest). |
+| `src/lib/coach-engine.test.ts` | Unit tests for CoachEngine (23 tests via Vitest). |
 | `src/lib/directives-engine.ts` | Pure domain progression engine (monotonic resin recovery, ETA formatting, parametric cooldowns, UTC+8 dates, check-in reward/retcode evaluation). Zero I/O, zero React hooks. |
-| `src/lib/directives-engine.test.ts` | Unit tests for DirectivesEngine (Vitest). |
+| `src/lib/directives-engine.test.ts` | Unit tests for DirectivesEngine (20 tests via Vitest). |
+| `src/lib/equipment-data.ts` | Curated Game8 & KQM meta equipment tables, dynamic fallback archetypes, set-specific weapon rankings and synergy notes. |
 | `src/lib/enka.ts` | Enka.Network API adapter & metadata fetcher (`characters.json`, `loc.json`), in-memory TTL caches; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/hoyolab.ts` | HoYoLAB Battle Chronicle adapter; maps wire payloads to domain DTOs and delegates evaluation to `BuildEngine`. |
 | `src/lib/gemini.ts` | Gemini 3.8 Flash Interactions API transport adapter (`generateCoachStrategy`, `askCoachFollowUp`, `askCoachEquipment`), JSON schema enforcement, error response unwrapping (`extractGeminiErrorMessage`), delegating fallback heuristics directly to `CoachEngine`. |
-| `src/lib/gemini.test.ts` | Unit tests for Gemini error unwrapping and message extraction (6 tests via Vitest). |
+| `src/lib/gemini.test.ts` | Unit tests for Gemini error unwrapping and message extraction (11 tests via Vitest). |
 | `src/lib/profile-store.ts` | Pure domain store (`ProfileStore`) managing state persistence (`teyvat_strategist_store_v2`), `SERVER_SNAPSHOT`, pure state query helpers, and legacy `_v1` migration. Zero React hooks. |
-| `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore`, pure state queries, and resin reconciliation (16 tests via Vitest). |
+| `src/lib/profile-store.test.ts` | Unit tests for `ProfileStore`, pure state queries, and resin reconciliation (18 tests via Vitest). |
 | `src/lib/use-profile-store.ts` | Reactive client hook (`useProfileStore`) connecting `ProfileStore` via `useSyncExternalStore` with stable `SERVER_SNAPSHOT`. |
 | `src/lib/use-has-mounted.ts` | Reactive client hook (`useHasMounted`) leveraging `useSyncExternalStore` to cleanly prevent SSR hydration mismatches in local-first components without cascading re-renders. |
 | `src/lib/test-fixtures.ts` | Centralized test fixture builders (`createMockCharacter`, `createMockArtifacts`, `createMockEncounter`, `MemoryStorageAdapter`) ensuring domain interface fidelity by construction. |

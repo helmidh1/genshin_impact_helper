@@ -1,6 +1,7 @@
 import type {
   BuildArchetype,
   CharacterEquipmentGuide,
+  CombatRole,
   MainStatRecommendations,
   ShowcaseCharacter,
   WeaponRecommendation,
@@ -8,6 +9,7 @@ import type {
 
 // Canonical Avatar ID mappings for robust identification across languages and showcase formats
 export const CHARACTER_AVATAR_IDS: Record<number, string> = {
+  10000109: "Valeriy",
   10000108: "Mitya",
   10000096: "Arlecchino",
   10000089: "Furina",
@@ -169,24 +171,12 @@ export const GAME8_CHARACTER_ARCHIVES: Record<string, string> = Object.fromEntri
   ])
 );
 
-export function normalizeCharacterName(name: string): string {
-  const trimmed = name.trim();
-  const aliasMap: Record<string, string> = {
-    Kazuha: "Kaedehara Kazuha",
-    Raiden: "Raiden Shogun",
-    "Raiden Ei": "Raiden Shogun",
-    Shogun: "Raiden Shogun",
-    Ayaka: "Kamisato Ayaka",
-    Ayato: "Kamisato Ayato",
-    Itto: "Arataki Itto",
-    Kokomi: "Sangonomiya Kokomi",
-    Heizou: "Shikanoin Heizou",
-    Yae: "Yae Miko",
-    Sara: "Kujou Sara",
-    Shinobu: "Kuki Shinobu",
-  };
-  return aliasMap[trimmed] ?? trimmed;
-}
+import {
+  getCharacterCombatRoles,
+  isRoleMatch,
+  normalizeCharacterName,
+} from "@/lib/character-roles";
+export { normalizeCharacterName };
 
 export function getCharacterSlug(name: string): string {
   const normalized = normalizeCharacterName(name);
@@ -257,6 +247,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "arlecchino-vape-hyper",
         name: "Vaporize / Hypercarry",
+        role: "DPS",
         description:
           "High single-target DPS paired with Hydro off-field applicators (Yelan, Xingqiu, Furina) and an Anemo VV shredder or Bennett.",
         talentPriority: [
@@ -375,6 +366,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "arlecchino-overload",
         name: "Chevreuse Overload",
+        role: "DPS",
         description:
           "Paired with Chevreuse and Electro sub-DPS (Fischl, Yae Miko, Raiden) for continuous -40% Pyro/Electro RES shred.",
         talentPriority: [
@@ -453,6 +445,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "furina-subdps-buffer",
         name: "Off-Field Sub-DPS & Fanfare Buffer",
+        role: "Sub-DPS",
         description:
           "The standard and most versatile Furina build, optimizing both personal Salon Solitaire damage and full Burst uptime.",
         talentPriority: [
@@ -543,6 +536,130 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
             "Reaching 38,000 - 40,000 HP maximizes her A4 talent (which caps at 40k HP). Always secure enough ER to burst every 18s before pushing CRIT.",
         },
       },
+      {
+        id: "furina-healer",
+        name: "Singer of Many Waters Healer",
+        role: "Healer",
+        description:
+          "Pneuma mode dedicated party sustainer prioritizing Max HP, Healing Bonus, and team survivability.",
+        talentPriority: [
+          "Elemental Skill: Salon Solitaire (Crown / Lv.10)",
+          "Elemental Burst: Let the People Rejoice (Lv.8-9)",
+          "Normal Attack (Lv.1)",
+        ],
+        bestWeapons: [
+          {
+            name: "Key of Khaj-Nisut",
+            rarity: 5,
+            tier: "BiS (Signature)",
+            reason: "Massive 66.2% HP substat directly elevating healing output.",
+            sourceNote: "Limited Weapon Banner",
+          },
+          {
+            name: "The Dockhand's Assistant",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "41.3% HP substat boosting healing ticks.",
+            sourceNote: "Limited Weapon Banner",
+          },
+          {
+            name: "Favonius Sword",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "Generates party particles on CRIT to ensure Burst availability.",
+            sourceNote: "Standard Gacha",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "Maiden Beloved",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary: "Increases healing effectiveness by 15% and party healing received by 20% on Skill/Burst.",
+            reason: "Maximizes Pneuma Singer of Many Waters healing per tick.",
+          },
+          {
+            name: "Song of Days Past",
+            type: "Alternative",
+            count: 4,
+            bonusSummary: "2pc: +15% Healing Bonus • 4pc: Converts healing volume into flat damage for active character.",
+            reason: "Converts Furina's continuous single-target healing into team damage.",
+          },
+          {
+            name: "Ocean-Hued Clam",
+            type: "Alternative",
+            count: 4,
+            bonusSummary: "Converts healing into area physical damage procs.",
+            reason: "Adds offensive value to Pneuma healing mode.",
+          },
+        ],
+        mainStats: {
+          sands: ["HP%", "Energy Recharge"],
+          goblet: ["HP%"],
+          circlet: ["Healing Bonus", "HP%"],
+        },
+        benchmarks: {
+          critRatio: "30%+ CRIT Rate (if using Favonius)",
+          recommendedEr: "160% - 180%",
+          keySubstats: ["HP%", "Flat HP", "Energy Recharge"],
+          targetNotes: "45,000+ HP with Healing Bonus circlet provides reliable 4,000 - 6,000+ HP recovery per pulse.",
+        },
+      },
+      {
+        id: "furina-support",
+        name: "Universal Fanfare Buffer",
+        role: "Support",
+        description:
+          "Support loadout emphasizing maximum Fanfare team DMG bonus and Tenacity attack buffs.",
+        talentPriority: [
+          "Elemental Burst: Let the People Rejoice (Crown / Lv.10)",
+          "Elemental Skill: Salon Solitaire (Lv.9)",
+          "Normal Attack (Lv.1)",
+        ],
+        bestWeapons: [
+          {
+            name: "Favonius Sword",
+            rarity: 4,
+            tier: "BiS (Signature)",
+            reason: "Ensures 100% Burst uptime for continuous Fanfare stacking across all rotations.",
+            sourceNote: "Standard Gacha",
+          },
+          {
+            name: "Fleuve Cendre Ferryman",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "High ER and Skill CRIT Rate.",
+            sourceNote: "Fontaine Fishing Association",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "Tenacity of the Millelith",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary: "4pc: When Skill hits an opponent, ATK of all party members increases by 20% for 3s.",
+            reason: "Furina's Salon members maintain 100% uptime on the Tenacity ATK buff.",
+          },
+          {
+            name: "Golden Troupe",
+            type: "Alternative",
+            count: 4,
+            bonusSummary: "+70% Skill DMG off-field.",
+            reason: "Universal balance of support and personal damage.",
+          },
+        ],
+        mainStats: {
+          sands: ["Energy Recharge", "HP%"],
+          goblet: ["HP%"],
+          circlet: ["CRIT Rate", "HP%"],
+        },
+        benchmarks: {
+          critRatio: "50%+ CRIT Rate / 100%+ CRIT DMG",
+          recommendedEr: "180% - 200%+",
+          keySubstats: ["Energy Recharge", "HP%", "CRIT Rate"],
+          targetNotes: "Prioritize ER to guarantee burst cast on cooldown for unbroken Fanfare team damage buffs.",
+        },
+      },
     ],
   },
 
@@ -558,6 +675,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "neuvillette-hypercarry",
         name: "Equitable Judgment Hypercarry",
+        role: "DPS",
         description:
           "Solo or team-buffered continuous charged attack torrent. Trigger 3 distinct Hydro reactions to maximize his Past Draconic Glories A1 passive.",
         talentPriority: [
@@ -834,6 +952,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "raiden-burst-dps",
         name: "Emblem Burst DPS / Battery",
+        role: "DPS",
         description:
           "Traditional Hypercarry or Rational DPS build converting Energy Recharge into massive burst multipliers via Emblem 4pc.",
         talentPriority: [
@@ -908,6 +1027,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "raiden-hyperbloom",
         name: "Hyperbloom Electro Trigger",
+        role: "Support",
         description:
           "Full Elemental Mastery build using her 0.9s coordinated Skill proc to trigger homing Hyperbloom Dendro cores.",
         talentPriority: [
@@ -959,6 +1079,61 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
             "Level 90 is mandatory. Reach 900 - 1,000+ EM to deal 30,000 - 36,000+ damage per Hyperbloom core.",
         },
       },
+      {
+        id: "raiden-subdps",
+        name: "Emblem Off-Field Battery & Sub-DPS",
+        role: "Sub-DPS",
+        description:
+          "Off-field skill damage and team burst energy restoration setup optimized for quickswap and dual-carry teams.",
+        talentPriority: [
+          "Elemental Burst: Secret Art: Musou Shinsetsu (Lv.9-10)",
+          "Elemental Skill: Transcendence: Baleful Omen (Lv.9)",
+          "Normal Attack: Origin (Lv.1)",
+        ],
+        bestWeapons: [
+          {
+            name: "The Catch",
+            rarity: 4,
+            tier: "BiS (Signature)",
+            reason: "45.9% ER, +32% Burst DMG, and +12% Burst CRIT Rate at R5.",
+            sourceNote: "F2P Inazuma Fishing",
+          },
+          {
+            name: "Favonius Lance",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "Maximizes energy particle generation for high-cost teammate bursts.",
+            sourceNote: "Standard Gacha",
+          },
+          {
+            name: "Engulfing Lightning",
+            rarity: 5,
+            tier: "Top Alternative (5★)",
+            reason: "Premier ER-to-ATK conversion.",
+            sourceNote: "Limited Weapon Banner",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "Emblem of Severed Fate",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary: "2pc: ER +20% • 4pc: Increases Burst DMG by 25% of ER.",
+            reason: "Ideal scaling for burst damage and team energy restoration.",
+          },
+        ],
+        mainStats: {
+          sands: ["Energy Recharge"],
+          goblet: ["Electro DMG Bonus", "ATK%"],
+          circlet: ["CRIT Rate", "CRIT DMG"],
+        },
+        benchmarks: {
+          critRatio: "60%+ CRIT Rate / 120%+ CRIT DMG",
+          recommendedEr: "230% - 260%",
+          keySubstats: ["CRIT Rate", "CRIT DMG", "Energy Recharge", "ATK%"],
+          targetNotes: "Ensure at least 230% ER for smooth full-team energy recharging.",
+        },
+      },
     ],
   },
 
@@ -974,6 +1149,7 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       {
         id: "bennett-buffer-healer",
         name: "Fantastic Voyage ATK Buffer & Healer",
+        role: "Support",
         description:
           "The standard Noblesse 4pc support build maximizing Base ATK contribution and 100% Burst uptime on cooldown.",
         talentPriority: [
@@ -1058,6 +1234,123 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
           keySubstats: ["Energy Recharge", "HP%", "Flat HP"],
           targetNotes:
             "ATK% artifact substats DO NOT increase Bennett's burst buff! Only his character base ATK and weapon base ATK count. Prioritize ER and HP%.",
+        },
+      },
+      {
+        id: "bennett-healer",
+        name: "Dedicated Burst Healer & Sustain",
+        role: "Healer",
+        description:
+          "High HP and Healing Bonus configuration maximizing tick healing for Furina teams and high-damage abyss floors.",
+        talentPriority: [
+          "Elemental Burst: Fantastic Voyage (Crown / Lv.10)",
+          "Elemental Skill: Passion Overload (Lv.6)",
+          "Normal Attack (Lv.1)",
+        ],
+        bestWeapons: [
+          {
+            name: "Skyward Blade",
+            rarity: 5,
+            tier: "BiS (Signature)",
+            reason: "High base ATK and 55.1% ER ensuring 100% healing burst uptime.",
+            sourceNote: "Standard Banner",
+          },
+          {
+            name: "Favonius Sword",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "61.3% ER and generates party particles on CRIT.",
+            sourceNote: "Standard Gacha",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "Maiden Beloved",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary: "Increases healing effectiveness by 15% and party healing received by 20% for 10s after Burst.",
+            reason: "Maximizes healing tick volume.",
+          },
+          {
+            name: "Song of Days Past",
+            type: "Alternative",
+            count: 4,
+            bonusSummary: "Converts excess healing into flat damage buffs for active character.",
+            reason: "Converts Bennett's massive healing rate into team damage.",
+          },
+          {
+            name: "Noblesse Oblige",
+            type: "Alternative",
+            count: 4,
+            bonusSummary: "4pc: +20% Team ATK on Burst.",
+            reason: "Standard buffer option with HP/Healing main stats.",
+          },
+        ],
+        mainStats: {
+          sands: ["Energy Recharge", "HP%"],
+          goblet: ["HP%"],
+          circlet: ["Healing Bonus", "HP%"],
+        },
+        benchmarks: {
+          critRatio: "30% - 50% CRIT Rate (if using Favonius)",
+          recommendedEr: "220% - 250%+",
+          keySubstats: ["Energy Recharge", "HP%", "Flat HP", "CRIT Rate"],
+          targetNotes: "30,000+ HP with 220%+ ER and Healing Bonus circlet heals 6,000 - 8,000+ HP per second.",
+        },
+      },
+      {
+        id: "bennett-dps",
+        name: "Melt / Vaporize Carry",
+        role: "DPS",
+        description:
+          "On-field Pyro carry capitalizing on his rapid Skill cooldown inside Fantastic Voyage with Chongyun or Xingqiu.",
+        talentPriority: [
+          "Elemental Skill: Passion Overload (Lv.9-10)",
+          "Elemental Burst: Fantastic Voyage (Crown / Lv.10)",
+          "Normal Attack: Strike of Fortune (Lv.8-9)",
+        ],
+        bestWeapons: [
+          {
+            name: "Mistsplitter Reforged",
+            rarity: 5,
+            tier: "BiS (Signature)",
+            reason: "674 Base ATK, 44.1% CRIT DMG, and elemental DMG bonus stacks.",
+            sourceNote: "Limited Weapon Banner",
+          },
+          {
+            name: "Primordial Jade Cutter",
+            rarity: 5,
+            tier: "Top Alternative (5★)",
+            reason: "44.1% CRIT Rate and flat ATK scaling off Max HP.",
+            sourceNote: "Limited Weapon Banner",
+          },
+          {
+            name: "The Alley Flash",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason: "Highest 4★ Base ATK (620) plus +12-24% universal DMG bonus.",
+            sourceNote: "Weapon Banner Gacha",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "Crimson Witch of Flames",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary: "2pc: Pyro DMG +15% • 4pc: Increases Melt/Vaporize DMG by 15% and Skill stacks Pyro DMG.",
+            reason: "Ideal scaling for Bennett's continuous 2-second cooldown Skill spam.",
+          },
+        ],
+        mainStats: {
+          sands: ["ATK%", "Elemental Mastery"],
+          goblet: ["Pyro DMG Bonus"],
+          circlet: ["CRIT Rate", "CRIT DMG"],
+        },
+        benchmarks: {
+          critRatio: "65%+ CRIT Rate / 140%+ CRIT DMG",
+          recommendedEr: "160% - 180%",
+          keySubstats: ["CRIT Rate", "CRIT DMG", "Elemental Mastery", "Energy Recharge"],
+          targetNotes: "Trigger reverse-Melt on every Skill cast for massive 50,000+ damage strikes.",
         },
       },
     ],
@@ -1814,6 +2107,121 @@ export const CURATED_EQUIPMENT_GUIDES: Record<string, CharacterEquipmentGuide> =
       },
     ],
   },
+
+  Valeriy: {
+    characterName: "Valeriy",
+    element: "Electro",
+    weaponType: "Sword",
+    role: "Off-Field Support & Stellar-Conduct Shielder",
+    overview:
+      "Featured in Game8's Best Stellar Conduct Support Build, Valeriy is a 4-star Electro Sword support from Snezhnaya who shields and empowers teammates. His shielding and off-field team buffs scale heavily with ATK, making him the premier defensive enabler for Stellar-Conduct carries like Mitya.",
+    guideLinks: getCharacterGuideLinks({ avatarId: 10000109, name: "Valeriy" }),
+    archetypes: [
+      {
+        id: "valeriy-stellar-conduct-support",
+        name: "Best Stellar Conduct Support Build",
+        role: "Off-Field Support",
+        description:
+          "Authoritative Game8 build maximizing Valeriy's ATK-scaling shield absorption and teamwide Stellar-Conduct reaction amplification.",
+        talentPriority: [
+          "Elemental Skill (Shield absorption & Stellar-Conduct enablement)",
+          "Elemental Burst (Off-field Electro application & ATK buffing)",
+          "Normal Attack (Leave at Lv.1)",
+        ],
+        bestWeapons: [
+          {
+            name: "Summit Shaper",
+            rarity: 5,
+            tier: "BiS (Signature)",
+            reason:
+              "608 Base ATK and massive +49.6% ATK substat, plus +20% Shield Strength and up to +40% ATK when protected by his shield.",
+            sourceNote: "Limited Weapon Banner",
+          },
+          {
+            name: "Aquila Favonia",
+            rarity: 5,
+            tier: "Top Alternative (5★)",
+            reason:
+              "Massive 674 Base ATK and unconditional +20% ATK passive, maximizing Valeriy's ATK-scaling shield strength.",
+            sourceNote: "Standard Banner",
+          },
+          {
+            name: "Skyward Blade",
+            rarity: 5,
+            tier: "Top Alternative (5★)",
+            reason:
+              "608 Base ATK and 55.1% Energy Recharge, ensuring consistent 100% burst uptime on cooldown.",
+            sourceNote: "Standard Banner",
+          },
+          {
+            name: "Calamity of Eshu",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason:
+              "565 Base ATK and Normal/Skill damage bonuses, offering high base stats for ATK-scaling support.",
+            sourceNote: "Event Exclusive Weapon",
+          },
+          {
+            name: "Moonweaver's Dawn",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason:
+              "Provides ATK% and Energy Recharge tailored for Snezhnayan support kits.",
+            sourceNote: "Gacha / Event Banner",
+          },
+          {
+            name: "Finale of the Deep",
+            rarity: 4,
+            tier: "Best 4★ / F2P",
+            reason:
+              "565 Base ATK, 27.6% ATK substat, and +12% ATK after casting Elemental Skill (plus flat ATK on Bond of Life clearance).",
+            sourceNote: "Fontaine / F2P Craftable",
+          },
+        ],
+        bestArtifactSets: [
+          {
+            name: "A Day Carved from Rising Winds",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary:
+              "2pc: ATK +18% • 4pc: After a Normal Attack, grants Blessing of Pastoral Winds. Triggers reaction bonuses and team buffs even when off-field.",
+            reason:
+              "Game8 Recommended #1 Best Artifact: Perfect synergy with Valeriy's ATK scaling and off-field Stellar-Conduct support.",
+          },
+          {
+            name: "Heart of the Furnace",
+            type: "4-Piece",
+            count: 4,
+            bonusSummary:
+              "2pc: ATK +18% • 4pc: Amplifies teamwide reaction damage and Stellar-Conduct / Stellar-Glimmer output based on ATK.",
+            reason:
+              "Game8 Recommended Alternate Artifact: Provides high ATK scaling and amplifies team reaction multipliers in Mitya compositions.",
+          },
+          {
+            name: "Noblesse Oblige",
+            type: "Alternative",
+            count: 4,
+            bonusSummary:
+              "2pc: Burst DMG +20% • 4pc: Using an Elemental Burst increases all party members' ATK by 20% for 12s.",
+            reason:
+              "Universal support alternative providing party-wide ATK buffing on Burst cast.",
+          },
+        ],
+        mainStats: {
+          sands: ["ATK%"],
+          goblet: ["ATK%"],
+          circlet: ["ATK%"],
+        },
+        benchmarks: {
+          critRatio: "CRIT is secondary; prioritize maximum ATK% and Energy Recharge.",
+          recommendedEr: "140% - 160% (130% with Skyward Blade)",
+          keySubstats: ["ATK%", "ATK (Flat)", "Energy Recharge"],
+          targetNotes:
+            "From Game8: Prioritize triple ATK% main stats (Sands, Goblet, Circlet) to directly maximize Valeriy's shield absorption and teamwide Stellar-Conduct reaction scaling.",
+        },
+      },
+    ],
+  },
 };
 
 export function detectWeaponType(
@@ -2015,314 +2423,493 @@ export function detectCharacterRarity(character: ShowcaseCharacter): 4 | 5 {
   return 5;
 }
 
+export function generateRoleSpecificArchetype(
+  character: ShowcaseCharacter,
+  role: CombatRole,
+  weaponType?: "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst",
+  normName?: string
+): BuildArchetype {
+  const wType = weaponType ?? detectWeaponType(character);
+  const name = normName ?? normalizeCharacterName(character.name);
+  const slug = getCharacterSlug(name);
+  const elem = character.element;
+
+  const isHpScaler =
+    character.stats.maxHp > 32000 ||
+    ["Furina", "Neuvillette", "Yelan", "Nilou", "Hu Tao", "Zhongli", "Dehya", "Baizhu"].includes(
+      name
+    );
+  const isDefScaler =
+    character.stats.def > 1200 ||
+    ["Xilonen", "Arataki Itto", "Itto", "Albedo", "Chiori", "Noelle"].includes(
+      name
+    );
+
+  if (role === "Healer" || role === "Off-Field Healer" || role === "On-Field Healer") {
+    const healerWeapons: Record<
+      "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst",
+      WeaponRecommendation[]
+    > = {
+      Catalyst: [
+        {
+          name: "Prototype Amber (R5)",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "41.3% HP, flat energy refund on burst, and heals the entire team.",
+          sourceNote: "Forge Craftable",
+        },
+        {
+          name: "Everlasting Moonglow",
+          rarity: 5,
+          tier: "Top Alternative (5★)",
+          reason: "49.6% HP, +10% Healing Bonus, and normal attack energy restore.",
+          sourceNote: "Limited Weapon Banner",
+        },
+        {
+          name: "Favonius Codex",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "High ER and team particle generation for 100% burst uptime.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+      Sword: [
+        {
+          name: "Favonius Sword",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "61.3% ER and generates party particles on CRIT.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "The Dockhand's Assistant",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "41.3% HP substat boosting healing scaling.",
+          sourceNote: "Limited Weapon Banner",
+        },
+        {
+          name: "Skyward Blade",
+          rarity: 5,
+          tier: "Top Alternative (5★)",
+          reason: "High Base ATK with 55.1% ER.",
+          sourceNote: "Standard Banner",
+        },
+      ],
+      Polearm: [
+        {
+          name: "Favonius Lance",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "30.6% ER and clear white particle generation.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Rightful Reward",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "Craftable Fontaine polearm with 27.6% HP and energy refund on heal.",
+          sourceNote: "Forge Craftable",
+        },
+        {
+          name: "Black Tassel",
+          rarity: 3,
+          tier: "Best 4★ / F2P",
+          reason: "46.9% HP substat maximizing HP-scaling heals.",
+          sourceNote: "Common 3★ Gacha",
+        },
+      ],
+      Bow: [
+        {
+          name: "Favonius Warbow",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "61.3% ER guaranteeing Burst is ready on cooldown.",
+          sourceNote: "Archon Quest / Gacha",
+        },
+        {
+          name: "Recurve Bow",
+          rarity: 3,
+          tier: "Best 4★ / F2P",
+          reason: "46.9% HP substat for HP-scaling healers.",
+          sourceNote: "Chests in Mondstadt/Liyue",
+        },
+      ],
+      Claymore: [
+        {
+          name: "Favonius Greatsword",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "61.3% ER and party particle generation.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Sacrificial Greatsword",
+          rarity: 4,
+          tier: "Top Alternative (5★)",
+          reason: "30.6% ER and resets Skill cooldown.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+    };
+
+    return {
+      id: `${slug}-healer`,
+      name: `${role} Sustain Setup`,
+      role: role,
+      description: `Recommended ${name} healing setup maximizing sustained recovery and team survivability.`,
+      talentPriority: ["Elemental Burst (Primary)", "Elemental Skill", "Normal Attack"],
+      bestWeapons: healerWeapons[wType] ?? healerWeapons.Sword,
+      bestArtifactSets: [
+        {
+          name: "Maiden Beloved",
+          type: "4-Piece",
+          count: 4,
+          bonusSummary:
+            "2pc: Healing Effectiveness +15% • 4pc: Using Skill/Burst increases healing received by all party members by 20% for 10s.",
+          reason: "Universal best healing volume artifact set.",
+        },
+        {
+          name: "Ocean-Hued Clam",
+          type: "Alternative",
+          count: 4,
+          bonusSummary:
+            "2pc: Healing Bonus +15% • 4pc: Accumulates healing into Sea-Dyed Foam that bursts for up to 30,000 Physical DMG.",
+          reason: "Converts high overhealing into physical area damage.",
+        },
+        {
+          name: "Song of Days Past",
+          type: "Alternative",
+          count: 4,
+          bonusSummary:
+            "2pc: Healing Bonus +15% • 4pc: Grants Waves of Days Past flat damage buff to active character based on healing.",
+          reason: "Modern Fontaine support/healer hybrid set.",
+        },
+      ],
+      mainStats: {
+        sands: ["Energy Recharge", isHpScaler ? "HP%" : isDefScaler ? "DEF%" : "ATK%"],
+        goblet: [isHpScaler ? "HP%" : isDefScaler ? "DEF%" : "ATK%"],
+        circlet: ["Healing Bonus", isHpScaler ? "HP%" : isDefScaler ? "DEF%" : "ATK%"],
+      },
+      benchmarks: {
+        critRatio: "30%+ CRIT Rate (if using Favonius)",
+        recommendedEr: "180% - 220%+",
+        keySubstats: ["Energy Recharge", isHpScaler ? "HP%" : isDefScaler ? "DEF%" : "ATK%", "CRIT Rate"],
+        targetNotes: "Prioritize Healing Bonus circlet and sufficient ER to trigger Burst reliably every rotation.",
+      },
+    };
+  }
+
+  if (role === "Support" || role === "Off-Field Support" || role === "On-Field Support") {
+    const supportWeapons: Record<
+      "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst",
+      WeaponRecommendation[]
+    > = {
+      Catalyst: [
+        {
+          name: "Thrilling Tales of Dragon Slayers",
+          rarity: 3,
+          tier: "BiS (Signature)",
+          reason: "35.2% HP and grants incoming active character an astronomical +48% ATK buff for 10s.",
+          sourceNote: "Common 3★ Gacha (R5 Recommended)",
+        },
+        {
+          name: "Favonius Codex",
+          rarity: 4,
+          tier: "Top Alternative (5★)",
+          reason: "High ER and team particle battery.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Sacrificial Fragments",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "221 EM and Skill cooldown reset.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+      Sword: [
+        {
+          name: "Favonius Sword",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "61.3% ER and generates 6 white energy particles on CRIT.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Freedom-Sworn",
+          rarity: 5,
+          tier: "Top Alternative (5★)",
+          reason: "198 EM and team +20% ATK +16% Normal/CA DMG buff.",
+          sourceNote: "Limited Weapon Banner",
+        },
+        {
+          name: "Sacrificial Sword",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "61.3% ER and 80% chance to reset Skill cooldown.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+      Polearm: [
+        {
+          name: "Favonius Lance",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "High ER and team particle generation on CRIT.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Dragon's Bane",
+          rarity: 4,
+          tier: "Top Alternative (5★)",
+          reason: "221 EM for reaction enabling and triggering.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Rightful Reward",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "Craftable Fontaine polearm with HP% and energy refund.",
+          sourceNote: "Forge Craftable",
+        },
+      ],
+      Bow: [
+        {
+          name: "Elegy for the End",
+          rarity: 5,
+          tier: "BiS (Signature)",
+          reason: "55.1% ER and party buff: +100 EM and +20% ATK.",
+          sourceNote: "Limited Weapon Banner",
+        },
+        {
+          name: "Favonius Warbow",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "61.3% ER ensuring team energy battery uptime.",
+          sourceNote: "Archon Quest / Gacha",
+        },
+        {
+          name: "The Stringless",
+          rarity: 4,
+          tier: "Top Alternative (5★)",
+          reason: "165 EM and +24-48% Skill/Burst DMG.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+      Claymore: [
+        {
+          name: "Favonius Greatsword",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "61.3% ER and particle battery.",
+          sourceNote: "Standard Gacha",
+        },
+        {
+          name: "Sacrificial Greatsword",
+          rarity: 4,
+          tier: "Best 4★ / F2P",
+          reason: "Resets Skill cooldown.",
+          sourceNote: "Standard Gacha",
+        },
+      ],
+    };
+
+    const primarySupportSet =
+      elem === "Anemo"
+        ? "Viridescent Venerer"
+        : elem === "Dendro"
+        ? "Deepwood Memories"
+        : elem === "Geo"
+        ? "Scroll of the Hero of Tona"
+        : "Noblesse Oblige";
+
+    const primarySupportReason =
+      elem === "Anemo"
+        ? "Decreases opponent Elemental RES to swirled element by 40% for 10s."
+        : elem === "Dendro"
+        ? "Decreases opponent Dendro RES by 30% for 8s on Skill/Burst hit."
+        : "Increases all party members' ATK by 20% for 12s after Burst.";
+
+    return {
+      id: `${slug}-support`,
+      name: `${role} Utility Setup`,
+      role: role,
+      description: `Recommended ${name} utility configuration prioritizing party buffs, resistance shredding, and energy battery generation.`,
+      talentPriority: ["Elemental Burst (Primary)", "Elemental Skill", "Normal Attack"],
+      bestWeapons: supportWeapons[wType] ?? supportWeapons.Sword,
+      bestArtifactSets: [
+        {
+          name: primarySupportSet,
+          type: "4-Piece",
+          count: 4,
+          bonusSummary: primarySupportReason,
+          reason: "Best-in-slot team utility set.",
+        },
+        {
+          name: "Tenacity of the Millelith",
+          type: "Alternative",
+          count: 4,
+          bonusSummary: "4pc: +20% Team ATK and +30% Shield Strength when Skill hits.",
+          reason: "Universal team attack buff for Skill-based supporters.",
+        },
+        {
+          name: "Noblesse Oblige",
+          type: "Alternative",
+          count: 4,
+          bonusSummary: "4pc: +20% Team ATK on Burst for 12s.",
+          reason: "Universal team attack buff.",
+        },
+      ],
+      mainStats: {
+        sands: ["Energy Recharge", "Elemental Mastery", isHpScaler ? "HP%" : "ATK%"],
+        goblet: ["Elemental Mastery", isHpScaler ? "HP%" : `${elem} DMG Bonus`],
+        circlet: ["CRIT Rate", "Elemental Mastery", isHpScaler ? "HP%" : "ATK%"],
+      },
+      benchmarks: {
+        critRatio: "40%+ CRIT Rate (for Favonius particle triggers)",
+        recommendedEr: "180% - 220%",
+        keySubstats: ["Energy Recharge", "CRIT Rate", "Elemental Mastery"],
+        targetNotes: "Focus on maximizing team utility uptime, resistance shred, and consistent particle funneling.",
+      },
+    };
+  }
+
+  if (role === "Sub-DPS" || role === "Off-Field DPS") {
+    return {
+      id: `${slug}-subdps`,
+      name: `${role} Off-Field Setup`,
+      role: role,
+      description: `Recommended ${name} off-field damage build utilizing high burst or skill scaling to contribute team damage from off-field.`,
+      talentPriority: ["Elemental Burst", "Elemental Skill", "Normal Attack"],
+      bestWeapons: [
+        {
+          name: "Golden Troupe / Off-Field Option",
+          rarity: 4,
+          tier: "BiS (Signature)",
+          reason: "Optimized for maximum off-field Skill and Burst damage.",
+        },
+      ],
+      bestArtifactSets: [
+        {
+          name: "Golden Troupe",
+          type: "4-Piece",
+          count: 4,
+          bonusSummary:
+            "2pc: Skill DMG +20% • 4pc: Skill DMG +25%, plus additional +25% when off-field (total +70% Skill DMG).",
+          reason: "Unsurpassed damage ceiling for off-field Skill users.",
+        },
+        {
+          name: "Emblem of Severed Fate",
+          type: "Alternative",
+          count: 4,
+          bonusSummary:
+            "2pc: ER +20% • 4pc: Increases Elemental Burst DMG by 25% of Energy Recharge (max 75%).",
+          reason: "Premier off-field Burst nuke set.",
+        },
+      ],
+      mainStats: {
+        sands: ["Energy Recharge", isHpScaler ? "HP%" : "ATK%", "Elemental Mastery"],
+        goblet: [`${elem} DMG Bonus`],
+        circlet: ["CRIT Rate", "CRIT DMG"],
+      },
+      benchmarks: {
+        critRatio: "65%+ CRIT Rate / 130%+ CRIT DMG",
+        recommendedEr: "160% - 200%",
+        keySubstats: ["CRIT Rate", "CRIT DMG", "Energy Recharge", "Elemental Mastery"],
+        targetNotes: "Balance ER to ensure burst availability on cooldown, then scale Crit and elemental damage.",
+      },
+    };
+  }
+
+  // Default: On-Field Carry / DPS
+  return {
+    id: `${slug}-dps`,
+    name: `${role} Carry Setup`,
+    role: role,
+    description: `Recommended ${name} carry build optimized for maximum personal damage output and on-field reaction scaling.`,
+    talentPriority: ["Normal Attack", "Elemental Skill", "Elemental Burst"],
+    bestWeapons: [
+      {
+        name: "Premier Carry Weapon",
+        rarity: 5,
+        tier: "BiS (Signature)",
+        reason: "Optimized for high base ATK, CRIT Rate/DMG, and active field damage bonuses.",
+      },
+    ],
+    bestArtifactSets: [
+      {
+        name: isHpScaler ? "Marechaussee Hunter" : "Gladiator's Finale",
+        type: "4-Piece",
+        count: 4,
+        bonusSummary: "Carry DMG Bonus on field.",
+        reason: `Optimized 4pc set for ${elem} character scaling and reaction output.`,
+      },
+      {
+        name: "Noblesse Oblige",
+        type: "Alternative",
+        count: 4,
+        bonusSummary: "4pc: +20% Team ATK on Burst for 12s.",
+        reason: "Universal alternative.",
+      },
+    ],
+    mainStats: {
+      sands: [isHpScaler ? "HP%" : isDefScaler ? "DEF%" : "ATK%", "Energy Recharge"],
+      goblet: [`${elem} DMG Bonus`],
+      circlet: ["CRIT Rate", "CRIT DMG"],
+    },
+    benchmarks: {
+      critRatio: "65%+ CRIT Rate / 130%+ CRIT DMG",
+      recommendedEr: "130% - 160%",
+      keySubstats: ["CRIT Rate", "CRIT DMG", "Energy Recharge"],
+      targetNotes: "Balance ER for consistent rotation uptime, then maximize CRIT Rate/DMG near a 1:2 ratio.",
+    },
+  };
+}
+
+export function getArchetypesForRole(
+  character: ShowcaseCharacter,
+  role: CombatRole
+): BuildArchetype[] {
+  const guide = getEquipmentGuide(character, role);
+  const matching = guide.archetypes.filter(
+    (a) => a.role === role || isRoleMatch(a.role ?? "On-Field DPS", role)
+  );
+  if (matching.length > 0) {
+    return matching;
+  }
+  return [generateRoleSpecificArchetype(character, role)];
+}
+
 export function generateDynamicEquipmentGuide(
-  character: ShowcaseCharacter
+  character: ShowcaseCharacter,
+  targetRole?: CombatRole
 ): CharacterEquipmentGuide {
   const normName = normalizeCharacterName(character.name);
   const guideLinks = getCharacterGuideLinks(character);
   const weaponType = detectWeaponType(character);
 
-  const isHpScaler =
-    character.stats.maxHp > 32000 ||
-    ["Furina", "Neuvillette", "Yelan", "Nilou", "Hu Tao", "Zhongli", "Dehya", "Baizhu"].includes(
-      normName
-    );
-  const isDefScaler =
-    character.stats.def > 1200 ||
-    ["Xilonen", "Arataki Itto", "Itto", "Albedo", "Chiori", "Noelle"].includes(
-      normName
-    );
-  const isAnemo = character.element === "Anemo";
-  const isDendro = character.element === "Dendro";
-  const isElectro = character.element === "Electro";
-  const isCryo = character.element === "Cryo";
+  const rawRoles =
+    character.roles && character.roles.length > 0
+      ? character.roles
+      : getCharacterCombatRoles(character.name, character.avatarId);
 
-  let sandsOptions = ["ATK%", "Energy Recharge"];
-  let gobletOptions = [`${character.element} DMG Bonus`];
-  let circletOptions = ["CRIT Rate", "CRIT DMG"];
-  let primarySetName = "Emblem of Severed Fate";
-  let primarySetBonus = "2pc: ER +20% • 4pc: Burst DMG +25% of ER.";
+  const roles = targetRole
+    ? [targetRole, ...rawRoles.filter((r) => r !== targetRole)]
+    : rawRoles;
 
-  if (isHpScaler) {
-    sandsOptions = ["HP%", "Energy Recharge"];
-    gobletOptions = [`${character.element} DMG Bonus`, "HP%"];
-    circletOptions = ["CRIT Rate", "CRIT DMG", "HP%"];
-    primarySetName = "Marechaussee Hunter";
-    primarySetBonus = "2pc: NA/CA DMG +15% • 4pc: +36% CRIT Rate on HP shifts.";
-  } else if (isDefScaler) {
-    sandsOptions = ["DEF%", "Energy Recharge"];
-    gobletOptions = ["DEF%", "Geo DMG Bonus"];
-    circletOptions = ["DEF%", "CRIT Rate", "Healing Bonus"];
-    primarySetName = "Husk of Opulent Dreams";
-    primarySetBonus = "2pc: DEF +30% • 4pc: Up to +24% DEF and +24% Geo DMG.";
-  } else if (isAnemo) {
-    sandsOptions = ["Elemental Mastery", "Energy Recharge"];
-    gobletOptions = ["Elemental Mastery", "Anemo DMG Bonus"];
-    circletOptions = ["Elemental Mastery", "CRIT Rate"];
-    primarySetName = "Viridescent Venerer";
-    primarySetBonus = "2pc: Anemo DMG +15% • 4pc: Swirl DMG +60% and -40% Enemy RES.";
-  } else if (isDendro) {
-    sandsOptions = ["Elemental Mastery", "Energy Recharge"];
-    gobletOptions = ["Dendro DMG Bonus", "Elemental Mastery"];
-    circletOptions = ["CRIT Rate", "CRIT DMG", "Elemental Mastery"];
-    primarySetName = "Deepwood Memories";
-    primarySetBonus = "2pc: Dendro DMG +15% • 4pc: -30% Enemy Dendro RES.";
-  } else if (isCryo) {
-    sandsOptions = ["ATK%", "Energy Recharge"];
-    gobletOptions = ["Cryo DMG Bonus"];
-    circletOptions = ["CRIT DMG", "CRIT Rate"];
-    primarySetName = "Blizzard Strayer";
-    primarySetBonus = "2pc: Cryo DMG +15% • 4pc: Up to +40% CRIT Rate on Frozen enemies.";
-  } else if (isElectro) {
-    sandsOptions = ["ATK%", "Energy Recharge", "Elemental Mastery"];
-    gobletOptions = ["Electro DMG Bonus"];
-    circletOptions = ["CRIT Rate", "CRIT DMG"];
-    primarySetName = "Thundering Fury";
-    primarySetBonus = "2pc: Electro DMG +15% • 4pc: Reaction DMG +40% and reduces Skill CD.";
-  }
-
-  // Type-specific weapons ranking
-  const weaponOptionsByCategory: Record<
-    "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst",
-    CharacterEquipmentGuide["archetypes"][0]["bestWeapons"]
-  > = {
-    Polearm: [
-      {
-        name: "Staff of Homa",
-        rarity: 5,
-        tier: "BiS (Signature)",
-        reason: "66.2% CRIT DMG, +20% HP, and massive flat ATK scaling.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Primordial Jade Winged-Spear",
-        rarity: 5,
-        tier: "Top Alternative (5★)",
-        reason: "High Base ATK (674), 22.1% CRIT Rate, and sustained stacking.",
-        sourceNote: "Standard Banner",
-      },
-      {
-        name: "The Catch (R5)",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "45.9% ER, +32% Burst DMG, and +12% Burst CRIT Rate.",
-        sourceNote: "Inazuma Fishing Association",
-      },
-      {
-        name: "Favonius Lance",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "High ER and team particle generation on CRIT.",
-        sourceNote: "Standard Gacha",
-      },
-      {
-        name: "Dragon's Bane",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "221 EM and +20-36% reaction damage.",
-        sourceNote: "Standard Gacha",
-      },
-    ],
-    Bow: [
-      {
-        name: "Aqua Simulacra",
-        rarity: 5,
-        tier: "BiS (Signature)",
-        reason: "88.2% CRIT DMG, +16% HP, and universal +20% DMG dealt.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "The First Great Magic",
-        rarity: 5,
-        tier: "Top Alternative (5★)",
-        reason: "66.2% CRIT DMG, +16% CA DMG, and team element ATK bonus.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Favonius Warbow",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "61.3% ER and clear team particle generation on CRIT.",
-        sourceNote: "Archon Quest & Gacha",
-      },
-      {
-        name: "The Stringless",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "165 EM and massive +24-48% Skill and Burst DMG bonus.",
-        sourceNote: "Standard Gacha",
-      },
-      {
-        name: "Slingshot (R5)",
-        rarity: 3,
-        tier: "Best 4★ / F2P",
-        reason: "31.2% CRIT Rate and +60% Normal/CA DMG within 0.3s.",
-        sourceNote: "Common 3★ Gacha",
-      },
-    ],
-    Catalyst: [
-      {
-        name: "Tome of the Eternal Flow",
-        rarity: 5,
-        tier: "BiS (Signature)",
-        reason: "88.2% CRIT DMG, +16% HP, +42% CA DMG, and flat energy refund.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "A Thousand Floating Dreams",
-        rarity: 5,
-        tier: "Top Alternative (5★)",
-        reason: "265 EM, +32 EM / +10% DMG, and +40 team EM sharing.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "The Widsith",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "55.1% CRIT DMG and explosive 10s ATK/Elemental/EM buffs.",
-        sourceNote: "Standard Gacha",
-      },
-      {
-        name: "Prototype Amber (R5)",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "41.3% HP, restores 18 flat energy, and heals the entire team on Burst.",
-        sourceNote: "Forge Craftable",
-      },
-      {
-        name: "Sacrificial Fragments",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "221 EM and resets Elemental Skill cooldown.",
-        sourceNote: "Standard Gacha",
-      },
-    ],
-    Claymore: [
-      {
-        name: "Beacon of the Reed Sea",
-        rarity: 5,
-        tier: "BiS (Signature)",
-        reason: "33.1% CRIT Rate, +20-40% ATK on Skill hit, and +32% HP.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Redhorn Stonethresher",
-        rarity: 5,
-        tier: "Top Alternative (5★)",
-        reason: "88.2% CRIT DMG, +28% DEF, and Normal/CA damage bonus.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Serpent Spine",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "27.6% CRIT Rate and up to +30-50% universal DMG stacks.",
-        sourceNote: "Battle Pass",
-      },
-      {
-        name: "Tidal Shadow",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "Craftable Fontaine claymore with +24-48% ATK upon receiving healing.",
-        sourceNote: "Forge Craftable",
-      },
-      {
-        name: "Favonius Greatsword",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "61.3% ER and particle generation for high burst uptime.",
-        sourceNote: "Standard Gacha",
-      },
-    ],
-    Sword: [
-      {
-        name: "Mistsplitter Reforged",
-        rarity: 5,
-        tier: "BiS (Signature)",
-        reason: "674 Base ATK, 44.1% CRIT DMG, and up to +28% Elemental DMG bonus.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Primordial Jade Cutter",
-        rarity: 5,
-        tier: "Top Alternative (5★)",
-        reason: "44.1% CRIT Rate, +20% HP, and flat ATK scaling off Max HP.",
-        sourceNote: "Limited Weapon Banner",
-      },
-      {
-        name: "Favonius Sword",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "61.3% ER and generates 6 white energy particles on CRIT.",
-        sourceNote: "Standard Gacha",
-      },
-      {
-        name: "Fleuve Cendre Ferryman",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "45.9% ER, +16% Skill CRIT Rate, and +32% ER after casting Skill.",
-        sourceNote: "Fontaine Fishing Association",
-      },
-      {
-        name: "Amenoma Kageuchi",
-        rarity: 4,
-        tier: "Best 4★ / F2P",
-        reason: "Craftable Inazuma sword with ATK% that refunds 18-36 flat energy on Burst.",
-        sourceNote: "Forge Craftable",
-      },
-    ],
-  };
-
-  const bestWeapons = weaponOptionsByCategory[weaponType];
+  const archetypes = roles.map((r) =>
+    generateRoleSpecificArchetype(character, r, weaponType, normName)
+  );
 
   return {
     characterName: normName,
     element: character.element,
     weaponType,
     role: `${character.element} Specialist / Carry`,
-    overview: `${normName} is a powerful ${character.element} ${weaponType} wielder. Consult the Game8, Icy-Veins, and KeqingMains guides linked below for comprehensive community theorycraft builds and rotation details.`,
+    overview: `${normName} is a versatile ${character.element} ${weaponType} wielder. Consult the Game8, Icy-Veins, and KeqingMains guides linked below for comprehensive community theorycraft builds and rotation details.`,
     guideLinks,
-    archetypes: [
-      {
-        id: `${getCharacterSlug(normName)}-meta`,
-        name: "Primary Meta Build",
-        description: `Recommended ${character.element} ${weaponType} equipment loadout optimized for consistent combat damage and full burst uptime.`,
-        talentPriority: [
-          "Elemental Burst (Primary)",
-          "Elemental Skill",
-          "Normal Attack",
-        ],
-        bestWeapons,
-        bestArtifactSets: [
-          {
-            name: primarySetName,
-            type: "4-Piece",
-            count: 4,
-            bonusSummary: primarySetBonus,
-            reason: `Optimized 4pc set for ${character.element} character scaling and reaction output.`,
-          },
-          {
-            name: "Noblesse Oblige",
-            type: "Alternative",
-            count: 4,
-            bonusSummary: "4pc: +20% Team ATK on Burst for 12s.",
-            reason: "Universal support set for teams lacking an ATK buffer.",
-          },
-        ],
-        mainStats: {
-          sands: sandsOptions,
-          goblet: gobletOptions,
-          circlet: circletOptions,
-        },
-        benchmarks: {
-          critRatio: "65%+ CRIT Rate / 130%+ CRIT DMG",
-          recommendedEr: "140% - 170%",
-          keySubstats: ["CRIT Rate", "CRIT DMG", "Energy Recharge", sandsOptions[0]],
-          targetNotes:
-            "Balance ER to ensure Burst is ready every rotation, then prioritize CRIT Rate/DMG near a 1:2 ratio.",
-        },
-      },
-    ],
+    archetypes,
   };
 }
 
@@ -2331,6 +2918,7 @@ export const CURATED_EQUIPMENT_GUIDES_BY_AVATAR_ID: Record<
   number | string,
   CharacterEquipmentGuide
 > = {
+  10000109: CURATED_EQUIPMENT_GUIDES["Valeriy"],
   10000108: CURATED_EQUIPMENT_GUIDES["Mitya"],
   10000096: CURATED_EQUIPMENT_GUIDES["Arlecchino"],
   10000089: CURATED_EQUIPMENT_GUIDES["Furina"],
@@ -2346,7 +2934,12 @@ export const CURATED_EQUIPMENT_GUIDES_BY_AVATAR_ID: Record<
   10000015: CURATED_EQUIPMENT_GUIDES["Xingqiu"],
 };
 
-export function getEquipmentGuide(character: ShowcaseCharacter): CharacterEquipmentGuide {
+export function getEquipmentGuide(
+  character: ShowcaseCharacter,
+  targetRole?: CombatRole
+): CharacterEquipmentGuide {
+  let baseGuide: CharacterEquipmentGuide | undefined;
+
   // 1. Highest priority: Pair directly by the character's unique numerical Avatar ID
   const avatarIdNum = Number(character.avatarId);
   if (Number.isFinite(avatarIdNum) && avatarIdNum > 0) {
@@ -2354,21 +2947,45 @@ export function getEquipmentGuide(character: ShowcaseCharacter): CharacterEquipm
       CURATED_EQUIPMENT_GUIDES_BY_AVATAR_ID[avatarIdNum] ??
       CURATED_EQUIPMENT_GUIDES_BY_AVATAR_ID[String(avatarIdNum)];
     if (byId) {
-      return byId;
+      baseGuide = byId;
     }
   }
 
   // 2. Second priority: Pair by normalized name or canonical alias
-  const norm = normalizeCharacterName(character.name);
-  if (CURATED_EQUIPMENT_GUIDES[norm]) {
-    return CURATED_EQUIPMENT_GUIDES[norm];
-  }
-  if (CURATED_EQUIPMENT_GUIDES[character.name]) {
-    return CURATED_EQUIPMENT_GUIDES[character.name];
+  if (!baseGuide) {
+    const norm = normalizeCharacterName(character.name);
+    if (CURATED_EQUIPMENT_GUIDES[norm]) {
+      baseGuide = CURATED_EQUIPMENT_GUIDES[norm];
+    } else if (CURATED_EQUIPMENT_GUIDES[character.name]) {
+      baseGuide = CURATED_EQUIPMENT_GUIDES[character.name];
+    } else {
+      baseGuide = generateDynamicEquipmentGuide(character, targetRole);
+    }
   }
 
-  // 3. Third priority: Fallback to dynamic guide tailored to weapon type & element
-  return generateDynamicEquipmentGuide(character);
+  // If targetRole is specified, reorder or prepend archetypes matching targetRole
+  if (targetRole && baseGuide && baseGuide.archetypes.length > 0) {
+    const matching = baseGuide.archetypes.filter(
+      (a) => a.role === targetRole || isRoleMatch(a.role ?? "On-Field DPS", targetRole)
+    );
+    if (matching.length > 0) {
+      const rest = baseGuide.archetypes.filter(
+        (a) => a.role !== targetRole && !isRoleMatch(a.role ?? "On-Field DPS", targetRole)
+      );
+      return {
+        ...baseGuide,
+        archetypes: [...matching, ...rest],
+      };
+    } else {
+      const dynamicArch = generateRoleSpecificArchetype(character, targetRole);
+      return {
+        ...baseGuide,
+        archetypes: [dynamicArch, ...baseGuide.archetypes],
+      };
+    }
+  }
+
+  return baseGuide;
 }
 
 export function getWeaponsForArtifactSet(
@@ -2448,6 +3065,14 @@ export function getWeaponsForArtifactSet(
       } else if (setLower.includes("noblesse")) {
         if (weapon.name.includes("Aquila") || weapon.name.includes("Mistsplitter") || weapon.name.includes("Sapwood") || weapon.name.includes("Skyward")) {
           synergyNote = "✨ 4pc Noblesse Synergy: High Base ATK and consistent Burst uptime maximize team-wide +20% ATK buff value!";
+        }
+      } else if (setLower.includes("rising winds")) {
+        if (weapon.name.includes("Summit") || weapon.name.includes("Aquila") || weapon.name.includes("Calamity") || weapon.name.includes("Moonweaver") || weapon.name.includes("Finale")) {
+          synergyNote = "✨ 4pc Rising Winds Synergy: Massive ATK scaling powers up team Pastoral Winds reaction buffs!";
+        }
+      } else if (setLower.includes("heart of the furnace") || setLower.includes("furnace")) {
+        if (weapon.name.includes("Summit") || weapon.name.includes("Aquila") || weapon.name.includes("Skyward") || weapon.name.includes("Finale")) {
+          synergyNote = "✨ 4pc Heart of the Furnace Synergy: High ATK scaling directly amplifies teamwide Stellar-Conduct reaction damage multipliers!";
         }
       }
     }

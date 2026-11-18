@@ -17,15 +17,32 @@ import {
 } from "lucide-react";
 import { compareEquippedWithRecommendations } from "@/lib/build-engine";
 import {
+  getArchetypesForRole,
   getEquipmentGuide,
   getMainStatsForArtifactSet,
   getWeaponsForArtifactSet,
 } from "@/lib/equipment-data";
+import {
+  getCharacterCombatRoles,
+  getRoleBadgeClass,
+  inferActiveCombatRole,
+  isRoleMatch,
+} from "@/lib/character-roles";
 import { profileStore } from "@/lib/profile-store";
 import type {
+  CombatRole,
   EquipmentCoachQueryResponse,
   ShowcaseCharacter,
 } from "@/types/genshin";
+
+const ALL_ROLES: CombatRole[] = [
+  "On-Field DPS",
+  "Off-Field DPS",
+  "Off-Field Support",
+  "On-Field Support",
+  "Off-Field Healer",
+  "On-Field Healer",
+];
 
 interface EquipmentRecommendationsPanelProps {
   character: ShowcaseCharacter;
@@ -36,25 +53,45 @@ export function EquipmentRecommendationsPanel({
   character,
   onOpenCoachTab,
 }: EquipmentRecommendationsPanelProps) {
-  const guide = useMemo(() => getEquipmentGuide(character), [character]);
+  const typicalRoles = useMemo(() => {
+    return character.roles && character.roles.length > 0
+      ? character.roles
+      : getCharacterCombatRoles(character.name, character.avatarId);
+  }, [character]);
 
-  // Track previous character avatarId to cleanly reset archetype and advice when character changes
+  const equippedRole = useMemo(() => {
+    return character.activeRole ?? inferActiveCombatRole(character);
+  }, [character]);
+
+  const initialRole = useMemo(() => {
+    return typicalRoles.includes(equippedRole) ? equippedRole : typicalRoles[0] ?? "On-Field DPS";
+  }, [typicalRoles, equippedRole]);
+
+  // Track previous character avatarId to cleanly reset role, archetype and advice when character changes
   const [prevAvatarId, setPrevAvatarId] = useState<number>(character.avatarId);
+  const [selectedRole, setSelectedRole] = useState<CombatRole>(initialRole);
+
+  const roleArchetypes = useMemo(() => {
+    return getArchetypesForRole(character, selectedRole);
+  }, [character, selectedRole]);
+
   const [selectedArchetypeId, setSelectedArchetypeId] = useState<string>(
-    guide.archetypes[0]?.id ?? ""
+    roleArchetypes[0]?.id ?? ""
   );
 
   const activeArchetype = useMemo(() => {
     return (
-      guide.archetypes.find((a) => a.id === selectedArchetypeId) ??
-      guide.archetypes[0]
+      roleArchetypes.find((a) => a.id === selectedArchetypeId) ??
+      roleArchetypes[0]
     );
-  }, [guide, selectedArchetypeId]);
+  }, [roleArchetypes, selectedArchetypeId]);
 
   // Track the active recommended artifact set to dynamically update weapon synergies & stats
   const [selectedArtifactSetName, setSelectedArtifactSetName] = useState<string>(
-    activeArchetype.bestArtifactSets[0]?.name ?? ""
+    activeArchetype?.bestArtifactSets[0]?.name ?? ""
   );
+
+  const guide = useMemo(() => getEquipmentGuide(character, selectedRole), [character, selectedRole]);
 
   const [questionInput, setQuestionInput] = useState("");
   const [isAsking, setIsAsking] = useState(false);
@@ -65,15 +102,37 @@ export function EquipmentRecommendationsPanel({
   const [coachError, setCoachError] = useState<string | null>(null);
 
   if (Number(character.avatarId) !== Number(prevAvatarId)) {
+    const nextTypicalRoles =
+      character.roles && character.roles.length > 0
+        ? character.roles
+        : getCharacterCombatRoles(character.name, character.avatarId);
+    const nextEquipped = character.activeRole ?? inferActiveCombatRole(character);
+    const nextRole =
+      nextTypicalRoles.some((r) => isRoleMatch(r, nextEquipped))
+        ? nextEquipped
+        : nextTypicalRoles[0] ?? "On-Field DPS";
+    const nextArchetypes = getArchetypesForRole(character, nextRole);
+
     setPrevAvatarId(character.avatarId);
-    setSelectedArchetypeId(guide.archetypes[0]?.id ?? "");
-    setSelectedArtifactSetName(guide.archetypes[0]?.bestArtifactSets[0]?.name ?? "");
+    setSelectedRole(nextRole);
+    setSelectedArchetypeId(nextArchetypes[0]?.id ?? "");
+    setSelectedArtifactSetName(nextArchetypes[0]?.bestArtifactSets[0]?.name ?? "");
     setQuestionInput("");
     setCoachError(null);
     setCoachResponse(
       profileStore.getEquipmentAdvice(character.avatarId, character.name)
     );
   }
+
+  const handleSelectRole = (newRole: CombatRole) => {
+    setSelectedRole(newRole);
+    const nextArchetypes = getArchetypesForRole(character, newRole);
+    const firstArch = nextArchetypes[0];
+    if (firstArch) {
+      setSelectedArchetypeId(firstArch.id);
+      setSelectedArtifactSetName(firstArch.bestArtifactSets[0]?.name ?? "");
+    }
+  };
 
   // Dynamically compute weapon rankings specifically tailored for the selected artifact set
   const displayedWeapons = useMemo(() => {
@@ -86,13 +145,17 @@ export function EquipmentRecommendationsPanel({
   }, [activeArchetype, selectedArtifactSetName]);
 
   const comparison = useMemo(() => {
+    const roleGuide = {
+      ...guide,
+      archetypes: roleArchetypes,
+    };
     return compareEquippedWithRecommendations(
       character,
-      guide,
-      activeArchetype.id,
+      roleGuide,
+      activeArchetype?.id,
       selectedArtifactSetName
     );
-  }, [character, guide, activeArchetype, selectedArtifactSetName]);
+  }, [character, guide, roleArchetypes, activeArchetype, selectedArtifactSetName]);
 
   const handleAskCoach = async (queryText?: string) => {
     const q = (queryText ?? questionInput).trim();
@@ -108,6 +171,7 @@ export function EquipmentRecommendationsPanel({
         body: JSON.stringify({
           mode: "equipment",
           character,
+          role: selectedRole,
           archetypeId: activeArchetype.id,
           artifactSetName: selectedArtifactSetName,
           question: q || undefined,
@@ -150,7 +214,7 @@ export function EquipmentRecommendationsPanel({
                 Equipment Hub
               </span>
               <span className="text-xs font-mono text-[#99907c]">
-                {character.element.toUpperCase()} {"//"} {guide.role}
+                {character.element.toUpperCase()} {"//"} {selectedRole.toUpperCase()} RECOMMENDATIONS
               </span>
             </div>
             <h3 className="font-[family-name:var(--font-space-grotesk)] text-xl font-bold text-[#dfe2f1] mt-1">
@@ -264,15 +328,120 @@ export function EquipmentRecommendationsPanel({
         </div>
       </section>
 
-      {/* Build Archetype Switcher */}
-      {guide.archetypes.length > 1 && (
+      {/* Recommended / Typical Meta Roles Banner */}
+      <div className="glass-panel-gold rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 text-xs font-mono font-bold text-[#f2ca50] uppercase tracking-wider">
+            <Sparkles className="w-4 h-4 text-[#f2ca50]" />
+            <span>RECOMMENDED META ROLE{typicalRoles.length > 1 ? "S" : ""}:</span>
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            {typicalRoles.map((role) => (
+              <span
+                key={role}
+                className={`px-2.5 py-0.5 rounded text-xs font-mono font-bold flex items-center gap-1.5 ${getRoleBadgeClass(
+                  role
+                )} shadow-sm`}
+              >
+                <span className="text-[#f2ca50]">★</span>
+                {role}
+                <span className="text-[10px] text-[#f2ca50]/90 uppercase font-normal">
+                  (Typical)
+                </span>
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="text-[11px] font-mono text-[#99907c] flex items-center gap-1.5">
+          <span>Current Equipped Build:</span>
+          <span
+            className={`px-2 py-0.5 rounded text-[10px] font-bold ${getRoleBadgeClass(
+              equippedRole
+            )}`}
+          >
+            {equippedRole}
+          </span>
+        </div>
+      </div>
+
+      {/* Combat Role Selector */}
+      <div className="glass-panel rounded-xl p-3.5 space-y-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-mono text-[#99907c]">
+            <Target className="w-3.5 h-3.5 text-[#f2ca50]" />
+            <span>SELECT ROLE RECOMMENDATION VIEW:</span>
+          </div>
+          <span className="text-[10px] font-mono text-[#99907c]">
+            Click any role to inspect tailored weapons &amp; artifact rankings
+          </span>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+          {ALL_ROLES.map((role) => {
+            const active = role === selectedRole;
+            const isTypical = typicalRoles.includes(role);
+            const isEquippedRole = equippedRole === role;
+
+            return (
+              <button
+                key={role}
+                type="button"
+                onClick={() => handleSelectRole(role)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer border flex items-center gap-1.5 ${
+                  active
+                    ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-bold shadow-[0_0_14px_rgba(212,175,55,0.3)] ring-1 ring-[#d4af37]/50"
+                    : isTypical
+                    ? "bg-[#0a0e18]/80 border-[#d4af37]/35 text-[#dfe2f1] hover:border-[#d4af37]/60 hover:bg-[#1a2030]"
+                    : "bg-[#0a0e18]/40 border-white/5 text-[#6b6555] hover:text-[#99907c] hover:border-white/10"
+                }`}
+                title={
+                  isTypical
+                    ? `${character.name} primary recommended/typical meta role`
+                    : "Off-meta / dynamic archetype"
+                }
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    role.includes("DPS")
+                      ? "bg-amber-400"
+                      : role.includes("Support")
+                      ? "bg-indigo-400"
+                      : "bg-emerald-400"
+                  }`}
+                />
+                {isTypical && <span className="text-[#f2ca50] text-[10px]">★</span>}
+                <span>{role}</span>
+                {isTypical && (
+                  <span className="text-[9px] uppercase tracking-wider text-[#f2ca50] font-bold">
+                    Typical
+                  </span>
+                )}
+                {isEquippedRole && (
+                  <span className="text-[9px] uppercase tracking-wider text-[#4cd6fb] font-normal">
+                    (Equipped)
+                  </span>
+                )}
+                {!isTypical && !isEquippedRole && (
+                  <span className="text-[8px] uppercase tracking-wider text-[#99907c]/60 font-normal">
+                    (Off-Meta)
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Build Archetype Switcher for Selected Role */}
+      {roleArchetypes.length > 1 && (
         <div className="glass-panel rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 text-xs font-mono text-[#99907c]">
             <Target className="w-3.5 h-3.5 text-[#f2ca50]" />
-            <span>SELECT BUILD ARCHETYPE:</span>
+            <span>SELECT {selectedRole.toUpperCase()} ARCHETYPE:</span>
           </div>
           <div className="flex flex-wrap items-center gap-1.5">
-            {guide.archetypes.map((arch) => {
+            {roleArchetypes.map((arch) => {
               const active = arch.id === activeArchetype.id;
               return (
                 <button
@@ -304,7 +473,7 @@ export function EquipmentRecommendationsPanel({
             Equipped Gear vs. {selectedArtifactSetName || "Recommended"} Setup
           </span>
           <span className="text-[#99907c]">
-            Focus: {selectedArtifactSetName} ({activeArchetype.name})
+            Focus: {selectedArtifactSetName} ({activeArchetype.name} • {selectedRole})
           </span>
         </div>
 

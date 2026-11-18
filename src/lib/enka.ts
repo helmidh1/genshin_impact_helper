@@ -7,6 +7,10 @@ import type {
   TravelerProfile,
 } from "@/types/genshin";
 import { evaluateArtifacts, round1 } from "@/lib/build-engine";
+import {
+  getCharacterCombatRoles,
+  inferActiveCombatRole,
+} from "@/lib/character-roles";
 
 export interface EnkaStoreCharacter {
   Element?: string;
@@ -347,8 +351,9 @@ function parseCharacter(raw: any, meta: EnkaMetadataCache): ShowcaseCharacter {
   };
 
   const evaluation = evaluateArtifacts(rawArtifactInputs, stats, meta.affixes);
+  const roles = getCharacterCombatRoles(name, avatarId);
 
-  return {
+  const characterRecord: ShowcaseCharacter = {
     avatarId,
     name,
     element,
@@ -373,6 +378,13 @@ function parseCharacter(raw: any, meta: EnkaMetadataCache): ShowcaseCharacter {
     totalCv: evaluation.totalCv,
     buildTier: evaluation.buildTier,
     critique: evaluation.critique,
+    roles,
+  };
+
+  const activeRole = inferActiveCombatRole(characterRecord);
+  return {
+    ...characterRecord,
+    activeRole,
   };
 }
 

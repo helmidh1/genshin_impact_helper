@@ -1,5 +1,9 @@
 import { createHash, randomInt } from "node:crypto";
 import { evaluateArtifacts, round1 } from "@/lib/build-engine";
+import {
+  getCharacterCombatRoles,
+  inferActiveCombatRole,
+} from "@/lib/character-roles";
 import { formatParametricCooldown } from "@/lib/directives-engine";
 import type {
   ArtifactSlot,
@@ -695,8 +699,9 @@ function parseHoyolabCharacter(
   };
 
   const evaluation = evaluateArtifacts(rawArtifactInputs, stats);
+  const roles = getCharacterCombatRoles(name, avatarId);
 
-  return {
+  const characterRecord: ShowcaseCharacter = {
     avatarId,
     name,
     element,
@@ -714,6 +719,13 @@ function parseHoyolabCharacter(
     totalCv: evaluation.totalCv,
     buildTier: evaluation.buildTier,
     critique: evaluation.critique,
+    roles,
+  };
+
+  const activeRole = inferActiveCombatRole(characterRecord);
+  return {
+    ...characterRecord,
+    activeRole,
   };
 }
 

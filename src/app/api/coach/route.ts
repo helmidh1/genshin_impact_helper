@@ -8,6 +8,7 @@ import {
 import type {
   CoachEngineMode,
   CoachingFocus,
+  CombatRole,
   EncounterPreset,
   ShowcaseCharacter,
 } from "@/types/genshin";
@@ -35,6 +36,7 @@ interface FollowUpRequestBody {
 interface EquipmentRequestBody {
   mode: "equipment";
   character: ShowcaseCharacter;
+  role?: CombatRole;
   archetypeId?: string;
   artifactSetName?: string;
   question?: string;
@@ -73,6 +75,7 @@ export async function POST(request: NextRequest) {
       }
       const equipmentAdvice = await askCoachEquipment({
         character: body.character,
+        role: body.role,
         archetypeId: body.archetypeId,
         artifactSetName: body.artifactSetName,
         question: body.question,

@@ -37,5 +37,25 @@ One of the five canonical equipment positions for relics: Flower, Plume, Sands, 
 _Avoid_: Relic position, equip type, gear piece
 
 **Scaling Archetype**:
-The primary stat scaling and functional role of a character build (e.g. Crit DPS, HP Support, DEF Scaler, EM Driver) that determines how stats are prioritized during build evaluation.
-_Avoid_: Build type, character class, role category
+The primary stat scaling formula and stat weight profile of a character build (e.g. Crit DPS, HP Support, DEF Scaler, EM Driver) that determines how stats are prioritized during build evaluation.
+_Avoid_: Build type, character class, gear classification
+
+**Combat Role**:
+The tactical battlefield function a character performs in a team composition, distinguished by field presence and mechanical duty: On-Field DPS (main carry/hypercarry), Off-Field DPS (sub-dps/deployable skill/burst damage), Off-Field Support (buffers, batteries, crowd control, resistance shred, shielders), On-Field Support (drivers, enablers), Off-Field Healer (deployable/burst sustain), or On-Field Healer (burst-attacking driver). Legacy broad roles (`DPS`, `Sub-DPS`, `Support`, `Healer`) remain supported via semantic role matching (`isRoleMatch`).
+_Avoid_: Job, class, character type
+
+**Typical Combat Role (Meta Role)**:
+The canonical, recommended role(s) designated by community theorycraft standards (e.g. Game8, Kage/KQM) that represent a character's primary intended team function regardless of an individual player's current equipped loadout. Highlighted with golden star indicators (`★ Typical`) in equipment recommendations.
+_Avoid_: Intended spec, standard job
+
+**Eligible Combat Roles**:
+The intrinsic set of tactical combat roles a character is capable of fulfilling across different viable team archetypes and playstyles.
+_Avoid_: Role list, character specs
+
+**Active Combat Role**:
+The specific combat role a character currently fulfills based on their equipped weapon, artifact set bonuses, and main stat loadout, inferred dynamically via `inferActiveCombatRole` and labeled as `(Equipped)`.
+_Avoid_: Current class, active spec
+
+**Two-Tier Equipment Architecture**:
+The architectural separation between instant offline deterministic curated meta recommendations (`CURATED_EQUIPMENT_GUIDES` sourced from Game8 and KQM) for baseline weapon/artifact targets, and the on-demand interactive AI Equipment Coach (`@google/genai` Gemini 3.8 Flash) for personalized player inventory diagnostics and build critiques.
+_Avoid_: Hybrid guide, dual calculator

@@ -19,20 +19,37 @@ import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
 import { EquipmentRecommendationsPanel } from "@/components/EquipmentRecommendationsPanel";
 import { ELEMENT_THEMES, getRollTierBadgeClass } from "@/lib/elements";
 import {
+  getCharacterCombatRoles,
+  getRoleBadgeClass,
+  inferActiveCombatRole,
+  isRoleMatch,
+} from "@/lib/character-roles";
+import {
   detectCharacterRarity,
   detectWeaponType,
   getEquipmentGuide,
   getWeaponsForArtifactSet,
 } from "@/lib/equipment-data";
-import type { ArtifactSlot, ShowcaseCharacter } from "@/types/genshin";
+import type { ArtifactSlot, CombatRole, ShowcaseCharacter } from "@/types/genshin";
 
 const ARTIFACT_SLOTS: ArtifactSlot[] = ["Flower", "Plume", "Sands", "Goblet", "Circlet"];
 
 type ElementFilter = "All" | ShowcaseCharacter["element"];
+type RoleFilter = "All" | CombatRole;
 type WeaponTypeFilter = "All" | "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst";
 type RarityFilter = "All" | 5 | 4;
 type SortOption = "cv" | "level" | "constellation" | "name";
 type SortDirection = "desc" | "asc";
+
+const ROLE_FILTERS: { label: string; value: RoleFilter }[] = [
+  { label: "All Roles", value: "All" },
+  { label: "On-Field DPS", value: "On-Field DPS" },
+  { label: "Off-Field DPS", value: "Off-Field DPS" },
+  { label: "Off-Field Support", value: "Off-Field Support" },
+  { label: "On-Field Support", value: "On-Field Support" },
+  { label: "Off-Field Healer", value: "Off-Field Healer" },
+  { label: "On-Field Healer", value: "On-Field Healer" },
+];
 
 const ELEMENT_FILTERS: ElementFilter[] = [
   "All",
@@ -76,6 +93,7 @@ export function ShowcaseTab({
 }: ShowcaseTabProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [elementFilter, setElementFilter] = useState<ElementFilter>("All");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("All");
   const [weaponTypeFilter, setWeaponTypeFilter] = useState<WeaponTypeFilter>("All");
   const [rarityFilter, setRarityFilter] = useState<RarityFilter>("All");
   const [sortBy, setSortBy] = useState<SortOption>("cv");
@@ -118,6 +136,21 @@ export function ShowcaseTab({
   const quickArchetype = quickGuide?.archetypes[0];
   const quickEquippedSetName = selected?.artifactSets[0]?.name;
 
+  const selectedRoles = useMemo(
+    () =>
+      selected
+        ? selected.roles ?? getCharacterCombatRoles(selected.name, selected.avatarId)
+        : [],
+    [selected]
+  );
+  const selectedActiveRole = useMemo(
+    () =>
+      selected
+        ? selected.activeRole ?? inferActiveCombatRole(selected)
+        : ("DPS" as CombatRole),
+    [selected]
+  );
+
   const quickArtifactSet = useMemo(() => {
     if (!quickArchetype) return undefined;
     return (
@@ -146,6 +179,7 @@ export function ShowcaseTab({
   const hasActiveFilters =
     searchQuery.trim() !== "" ||
     elementFilter !== "All" ||
+    roleFilter !== "All" ||
     weaponTypeFilter !== "All" ||
     rarityFilter !== "All" ||
     sortBy !== "cv" ||
@@ -154,6 +188,7 @@ export function ShowcaseTab({
   const handleResetFilters = () => {
     setSearchQuery("");
     setElementFilter("All");
+    setRoleFilter("All");
     setWeaponTypeFilter("All");
     setRarityFilter("All");
     setSortBy("cv");
@@ -171,14 +206,21 @@ export function ShowcaseTab({
       if (elementFilter !== "All" && char.element !== elementFilter) {
         return false;
       }
-      // 3. Weapon type filter
+      // 3. Role filter (matches character eligible roles capability)
+      if (roleFilter !== "All") {
+        const roles = char.roles ?? getCharacterCombatRoles(char.name, char.avatarId);
+        if (!roles.some((r) => isRoleMatch(r, roleFilter))) {
+          return false;
+        }
+      }
+      // 4. Weapon type filter
       if (weaponTypeFilter !== "All") {
         const weaponType = detectWeaponType(char);
         if (weaponType !== weaponTypeFilter) {
           return false;
         }
       }
-      // 4. Rarity filter
+      // 5. Rarity filter
       if (rarityFilter !== "All") {
         const rarity = detectCharacterRarity(char);
         if (rarity !== rarityFilter) {
@@ -219,6 +261,7 @@ export function ShowcaseTab({
     characters,
     searchQuery,
     elementFilter,
+    roleFilter,
     weaponTypeFilter,
     rarityFilter,
     sortBy,
@@ -307,6 +350,13 @@ export function ShowcaseTab({
                 </span>
                 <span className="text-[10px] font-mono text-[#99907c] tabular-nums">
                   Lv.{selected.level} • {selected.totalCv.toFixed(0)} CV
+                </span>
+                <span
+                  className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${getRoleBadgeClass(
+                    selectedActiveRole
+                  )}`}
+                >
+                  {selectedActiveRole}
                 </span>
               </div>
 
@@ -497,6 +547,30 @@ export function ShowcaseTab({
                     Showing <strong className="text-[#dfe2f1]">{filteredCharacters.length}</strong> of {characters.length} characters
                   </div>
                 </div>
+
+                {/* Role Filter Pills Row */}
+                <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-white/5">
+                  <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider mr-1">
+                    Role:
+                  </span>
+                  {ROLE_FILTERS.map((r) => {
+                    const active = roleFilter === r.value;
+                    return (
+                      <button
+                        key={r.value}
+                        type="button"
+                        onClick={() => setRoleFilter(r.value)}
+                        className={`px-2.5 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                          active
+                            ? "bg-[#262a35] border-[#d4af37]/60 text-[#f2ca50] font-semibold shadow-[0_0_8px_rgba(212,175,55,0.25)]"
+                            : "bg-[#0a0e18]/60 border-white/10 text-[#99907c] hover:text-[#dfe2f1]"
+                        }`}
+                      >
+                        {r.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="flex items-center gap-3 overflow-x-auto pb-1">
@@ -517,6 +591,7 @@ export function ShowcaseTab({
                   filteredCharacters.map((char) => {
                     const active = Number(char.avatarId) === Number(selected.avatarId);
                     const cTheme = ELEMENT_THEMES[char.element];
+                    const charActiveRole = char.activeRole ?? inferActiveCombatRole(char);
                     return (
                       <button
                         key={char.avatarId}
@@ -545,8 +620,15 @@ export function ShowcaseTab({
                               C{char.constellation}
                             </span>
                           </div>
-                          <div className="text-[10px] font-mono text-[#99907c] tabular-nums">
-                            Lv.{char.level} • {detectWeaponType(char)} • {char.totalCv.toFixed(0)} CV
+                          <div className="text-[10px] font-mono text-[#99907c] tabular-nums flex items-center gap-1.5 mt-0.5">
+                            <span>Lv.{char.level} • {char.totalCv.toFixed(0)} CV</span>
+                            <span
+                              className={`px-1.5 py-0.2 rounded text-[9px] font-semibold uppercase tracking-wider ${getRoleBadgeClass(
+                                charActiveRole
+                              )}`}
+                            >
+                              {charActiveRole}
+                            </span>
                           </div>
                         </div>
                       </button>
@@ -639,6 +721,20 @@ export function ShowcaseTab({
                     <span className="text-[#f2ca50] font-bold">
                       C{selected.constellation}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    <span
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase tracking-wider ${getRoleBadgeClass(
+                        selectedActiveRole
+                      )}`}
+                    >
+                      Active Role: {selectedActiveRole}
+                    </span>
+                    {selectedRoles.length > 1 && (
+                      <span className="text-[10px] font-mono text-[#99907c]">
+                        (Versatility: {selectedRoles.join(", ")})
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>

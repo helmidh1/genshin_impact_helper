@@ -1,8 +1,13 @@
 import type {
   DailyDirectives,
   EncounterPreset,
+  ShowcaseCharacter,
   TravelerProfile,
 } from "@/types/genshin";
+import {
+  getCharacterCombatRoles,
+  inferActiveCombatRole,
+} from "@/lib/character-roles";
 
 export const DEFAULT_DIRECTIVES: DailyDirectives = {
   resin: 174,
@@ -92,22 +97,7 @@ export const ENCOUNTER_PRESETS: EncounterPreset[] = [
   },
 ];
 
-export const DEMO_TRAVELER_PROFILE: TravelerProfile = {
-  uid: "100000000",
-  nickname: "Traveler",
-  signature: "Hero of Teyvat • Showcase Explorer",
-  ar: 60,
-  worldLevel: 9,
-  achievements: 1184,
-  abyssFloor: "12-3",
-  abyssStars: "36/36",
-  theaterAct: "Act 10",
-  theaterMedals: 8,
-  avatarCount: 78,
-  lv90Count: 44,
-  syncedAt: new Date().toISOString(),
-  source: "demo",
-  characters: [
+const DEMO_RAW_CHARACTERS: ShowcaseCharacter[] = [
     {
       avatarId: 10000096,
       name: "Arlecchino",
@@ -1306,5 +1296,30 @@ export const DEMO_TRAVELER_PROFILE: TravelerProfile = {
         },
       ],
     },
-  ],
+  ];
+
+export const DEMO_TRAVELER_PROFILE: TravelerProfile = {
+  uid: "100000000",
+  nickname: "Traveler",
+  signature: "Hero of Teyvat • Showcase Explorer",
+  ar: 60,
+  worldLevel: 9,
+  achievements: 1184,
+  abyssFloor: "12-3",
+  abyssStars: "36/36",
+  theaterAct: "Act 10",
+  theaterMedals: 8,
+  avatarCount: 78,
+  lv90Count: 44,
+  syncedAt: new Date().toISOString(),
+  source: "demo",
+  characters: DEMO_RAW_CHARACTERS.map((char) => {
+    const roles = char.roles ?? getCharacterCombatRoles(char.name, char.avatarId);
+    const activeRole = char.activeRole ?? inferActiveCombatRole({ ...char, roles });
+    return {
+      ...char,
+      roles,
+      activeRole,
+    };
+  }),
 };

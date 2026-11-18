@@ -7,7 +7,7 @@
 [![React](https://img.shields.io/badge/React-19.3.0-blue?style=flat-square&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x_Strict-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-v4.3-38bdf8?style=flat-square&logo=tailwindcss)](https://tailwindcss.com/)
-[![Vitest](https://img.shields.io/badge/Vitest-93_Tests_Passing-6ebd4c?style=flat-square&logo=vitest)](https://vitest.dev/)
+[![Vitest](https://img.shields.io/badge/Vitest-112_Tests_Passing-6ebd4c?style=flat-square&logo=vitest)](https://vitest.dev/)
 [![AI Powered](https://img.shields.io/badge/Gemini_3.8_Flash-Interactions_API-8e75ff?style=flat-square&logo=google)](https://ai.google.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
@@ -28,13 +28,20 @@ Designed with **strict domain purity** and **zero external database dependencies
 - **Substat Crit Value (CV) Grading**: Evaluates pure substat roll luck ($\text{CV} = [\text{CRIT Rate} \times 2] + \text{CRIT DMG}$) across all 5 artifact slots with roll tiering (God Roll, Ace, High, Solid, Needs Work).
 - **Toggleable CV Theorycrafting Drawer**: An educational in-app explanation drawer detailing the universal 1:2 roll budget ratio, substat evaluation criteria, build quality benchmarks ($<100$ Developing to $220+$ Elite), and an interactive 5-piece breakdown of the active character.
 - **Hardware-Accelerated Slide Drawer**: Smoothly collapse or expand the character selection carousel with CSS grid transitions, featuring right-anchored toggle controls and active character preview chips.
+- **Combat Role & Multi-Role Versatility Classification**:
+  - Automatically identifies intrinsic eligible roles and evaluates the character's active combat role based on equipped gear.
+  - Distinguishes field presence: `On-Field DPS`, `Off-Field DPS`, `Off-Field Support`, `On-Field Support`, `Off-Field Healer`, and `On-Field Healer`.
+  - Prominently showcases community-standard **Typical Meta Roles** (`★ Typical`) alongside active player loadouts (`(Equipped)`).
 - **Multi-Filter & Symmetrical Sorting**:
   - Search characters strictly by name.
+  - Filter by combat role (`On-Field DPS`, `Off-Field DPS`, `Off-Field Support`, etc.).
   - Filter by weapon type (`Sword`, `Claymore`, `Polearm`, `Bow`, `Catalyst`).
   - Filter by rarity (`All Stars`, `5★`, `4★`).
   - Filter by element (`Pyro`, `Hydro`, `Electro`, `Cryo`, `Dendro`, `Anemo`, `Geo`).
   - Sort by Crit Value, Level, Constellation, or Name with a dedicated **High ⇄ Low** (or **A ⇄ Z**) direction toggle.
-- **KQM-Aligned Equipment Guides**: Integrated weapon rankings (BiS, Top Alternatives, F2P), artifact set recommendations with 4-piece synergies, stat benchmarks, and external links to KeqingMains, Game8, and Icy-Veins.
+- **Two-Tier Equipment Architecture (Curated Guides + AI Coach)**:
+  - **Tier 1 (Instant Curated Guides)**: Curated weapon rankings (BiS Signature, Top 5★ Alternatives, Best 4★ / F2P), artifact set recommendations with set-specific synergies, main/substat targets from Game8 and KeqingMains.
+  - **Tier 2 (AI Equipment Coach)**: On-demand interactive consultation via Gemini 3.8 Flash for custom gear comparisons and personal inventory advice.
 
 ### 2. 🧠 AI Combat & Rotation Coach
 - **Gemini 3.8 Flash Integration**: Assembly of structured KQM-style multi-step team rotations, elemental reaction sequences, particle funneling guidance, and boss matchup advice via `@google/genai` Interactions API.
@@ -71,8 +78,10 @@ src/
 │   └── OverviewTab.tsx      # Directives, resin clock, and profile summary
 ├── lib/                     # Pure Domain Theorycraft Engines & Adapters
 │   ├── build-engine.ts      # Pure CV math, roll tiering, stat weights (Zero I/O)
+│   ├── character-roles.ts   # Pure combat role catalogs, on/off-field heuristics (Zero I/O)
 │   ├── coach-engine.ts      # Pure rotation sequencing, ER benchmarks (Zero I/O)
 │   ├── directives-engine.ts # Pure monotonic resin clocks & cooldowns (Zero I/O)
+│   ├── equipment-data.ts    # Curated Game8/KQM meta guides, set synergies & archetypes
 │   ├── profile-store.ts     # Universal domain state store & legacy migrations
 │   ├── gemini.ts            # Transport adapter for Google GenAI Interactions API
 │   ├── enka.ts              # Upstream Enka.Network API adapter & TTL caches

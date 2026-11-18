@@ -8,6 +8,7 @@ import { computeResonances, ELEMENT_THEMES } from "@/lib/elements";
 import type {
   CoachStrategyResponse,
   CoachingFocus,
+  CombatRole,
   EncounterPreset,
   EquipmentCoachQueryResponse,
   SavedPartySetup,
@@ -432,11 +433,12 @@ export function buildFallbackStrategy(
 
 export function buildFallbackEquipmentAdvice(params: {
   character: ShowcaseCharacter;
+  role?: CombatRole;
   archetypeId?: string;
   artifactSetName?: string;
   question?: string;
 }): EquipmentCoachQueryResponse {
-  const guide = getEquipmentGuide(params.character);
+  const guide = getEquipmentGuide(params.character, params.role);
   const archetype =
     guide.archetypes.find((a) => a.id === params.archetypeId) ??
     guide.archetypes[0];

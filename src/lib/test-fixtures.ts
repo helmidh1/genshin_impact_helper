@@ -1,4 +1,8 @@
 import { tallyArtifactSets } from "@/lib/build-engine";
+import {
+  getCharacterCombatRoles,
+  inferActiveCombatRole,
+} from "@/lib/character-roles";
 import type {
   ArtifactPiece,
   ArtifactSlot,
@@ -98,7 +102,8 @@ export function createMockCharacter(
   const artifacts = overrides?.artifacts ?? createMockArtifacts();
   const setNames = artifacts.map((a) => a.setName);
 
-  return {
+  const roles = overrides?.roles ?? getCharacterCombatRoles(name, overrides?.avatarId);
+  const baseChar: ShowcaseCharacter = {
     avatarId: 10000000 + Math.floor(Math.random() * 999999),
     name,
     element,
@@ -121,7 +126,14 @@ export function createMockCharacter(
     },
     totalCv: 180.0,
     buildTier: "S Tier",
+    roles,
     ...overrides,
+  };
+
+  const activeRole = overrides?.activeRole ?? inferActiveCombatRole(baseChar);
+  return {
+    ...baseChar,
+    activeRole,
   };
 }
 

@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import {
   AlertTriangle,
+  ArrowDown,
+  ArrowUp,
   Award,
   CheckCircle2,
   Crown,
@@ -15,20 +17,46 @@ import {
   Swords,
   Trophy,
   Users,
+  X,
 } from "lucide-react";
 import { DailyCheckinCard } from "@/components/DailyCheckinCard";
 import { CharacterAvatar, ElementBadge } from "@/components/ElementBadge";
 import { ELEMENT_THEMES } from "@/lib/elements";
 import { calculateResinEta, formatCrystalflyTrapCooldown } from "@/lib/directives-engine";
+import {
+  detectCharacterRarity,
+  detectWeaponType,
+} from "@/lib/equipment-data";
+import {
+  getCharacterCombatRoles,
+  getRoleBadgeClass,
+  inferActiveCombatRole,
+  isRoleMatch,
+} from "@/lib/character-roles";
 import type {
+  CombatRole,
   DailyDirectives,
   HoyolabCheckinState,
   ShowcaseCharacter,
   TravelerProfile,
 } from "@/types/genshin";
 
-type SortMode = "cv" | "constellation" | "element";
 type ElementFilter = "All" | ShowcaseCharacter["element"];
+type RoleFilter = "All" | CombatRole;
+type WeaponTypeFilter = "All" | "Sword" | "Claymore" | "Polearm" | "Bow" | "Catalyst";
+type RarityFilter = "All" | 5 | 4;
+type SortOption = "cv" | "level" | "constellation" | "name";
+type SortDirection = "desc" | "asc";
+
+const ROLE_FILTERS: { label: string; value: RoleFilter }[] = [
+  { label: "All Roles", value: "All" },
+  { label: "On-Field DPS", value: "On-Field DPS" },
+  { label: "Off-Field DPS", value: "Off-Field DPS" },
+  { label: "Off-Field Support", value: "Off-Field Support" },
+  { label: "On-Field Support", value: "On-Field Support" },
+  { label: "Off-Field Healer", value: "Off-Field Healer" },
+  { label: "On-Field Healer", value: "On-Field Healer" },
+];
 
 const ELEMENT_FILTERS: ElementFilter[] = [
   "All",
@@ -39,6 +67,22 @@ const ELEMENT_FILTERS: ElementFilter[] = [
   "Dendro",
   "Anemo",
   "Geo",
+];
+
+const WEAPON_TYPE_FILTERS: { label: string; value: WeaponTypeFilter }[] = [
+  { label: "All Weapons", value: "All" },
+  { label: "Sword", value: "Sword" },
+  { label: "Claymore", value: "Claymore" },
+  { label: "Polearm", value: "Polearm" },
+  { label: "Bow", value: "Bow" },
+  { label: "Catalyst", value: "Catalyst" },
+];
+
+const SORT_OPTIONS: { label: string; value: SortOption }[] = [
+  { label: "Crit Value (CV)", value: "cv" },
+  { label: "Level", value: "level" },
+  { label: "Constellation", value: "constellation" },
+  { label: "Name", value: "name" },
 ];
 
 interface OverviewTabProps {
@@ -73,35 +117,113 @@ export function OverviewTab({
   onInspectCharacter,
   onOpenCoach,
 }: OverviewTabProps) {
-  const [sortMode, setSortMode] = useState<SortMode>("cv");
   const [searchQuery, setSearchQuery] = useState("");
   const [elementFilter, setElementFilter] = useState<ElementFilter>("All");
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>("All");
+  const [weaponTypeFilter, setWeaponTypeFilter] = useState<WeaponTypeFilter>("All");
+  const [rarityFilter, setRarityFilter] = useState<RarityFilter>("All");
+  const [sortBy, setSortBy] = useState<SortOption>("cv");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
 
-  const sortedCharacters = useMemo(() => {
-    const list = [...profile.characters];
-    if (sortMode === "cv") {
-      return list.sort((a, b) => b.totalCv - a.totalCv);
-    }
-    if (sortMode === "constellation") {
-      return list.sort((a, b) => b.constellation - a.constellation || b.totalCv - a.totalCv);
-    }
-    return list.sort((a, b) => a.element.localeCompare(b.element));
-  }, [profile.characters, sortMode]);
+  const hasActiveFilters =
+    searchQuery.trim() !== "" ||
+    elementFilter !== "All" ||
+    roleFilter !== "All" ||
+    weaponTypeFilter !== "All" ||
+    rarityFilter !== "All" ||
+    sortBy !== "cv" ||
+    sortDirection !== "desc";
+
+  const handleResetFilters = () => {
+    setSearchQuery("");
+    setElementFilter("All");
+    setRoleFilter("All");
+    setWeaponTypeFilter("All");
+    setRarityFilter("All");
+    setSortBy("cv");
+    setSortDirection("desc");
+  };
 
   const filteredCharacters = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return sortedCharacters.filter((char) => {
+    const filtered = profile.characters.filter((char) => {
+      // 1. Search criteria: character name, weapon name, or artifact set
+      if (q) {
+        const matchesName = char.name.toLowerCase().includes(q);
+        const matchesWeapon = char.weapon.name.toLowerCase().includes(q);
+        const matchesSet = char.artifactSets.some((s) =>
+          s.name.toLowerCase().includes(q)
+        );
+        if (!matchesName && !matchesWeapon && !matchesSet) {
+          return false;
+        }
+      }
+      // 2. Element filter
       if (elementFilter !== "All" && char.element !== elementFilter) {
         return false;
       }
-      if (!q) return true;
-      return (
-        char.name.toLowerCase().includes(q) ||
-        char.weapon.name.toLowerCase().includes(q) ||
-        char.artifactSets.some((s) => s.name.toLowerCase().includes(q))
-      );
+      // 3. Role filter (matches character eligible roles capability)
+      if (roleFilter !== "All") {
+        const roles =
+          char.roles ?? getCharacterCombatRoles(char.name, char.avatarId);
+        if (!roles.some((r) => isRoleMatch(r, roleFilter))) {
+          return false;
+        }
+      }
+      // 4. Weapon type filter
+      if (weaponTypeFilter !== "All") {
+        const weaponType = detectWeaponType(char);
+        if (weaponType !== weaponTypeFilter) {
+          return false;
+        }
+      }
+      // 5. Rarity filter
+      if (rarityFilter !== "All") {
+        const rarity = detectCharacterRarity(char);
+        if (rarity !== rarityFilter) {
+          return false;
+        }
+      }
+      return true;
     });
-  }, [sortedCharacters, searchQuery, elementFilter]);
+
+    return [...filtered].sort((a, b) => {
+      const isAsc = sortDirection === "asc";
+      const modifier = isAsc ? -1 : 1;
+
+      if (sortBy === "cv") {
+        const diff =
+          b.totalCv !== a.totalCv ? b.totalCv - a.totalCv : b.level - a.level;
+        return diff * modifier;
+      }
+      if (sortBy === "level") {
+        const diff =
+          b.level !== a.level ? b.level - a.level : b.totalCv - a.totalCv;
+        return diff * modifier;
+      }
+      if (sortBy === "constellation") {
+        const diff =
+          b.constellation !== a.constellation
+            ? b.constellation - a.constellation
+            : b.totalCv - a.totalCv;
+        return diff * modifier;
+      }
+      if (sortBy === "name") {
+        const diff = a.name.localeCompare(b.name);
+        return isAsc ? -diff : diff;
+      }
+      return 0;
+    });
+  }, [
+    profile.characters,
+    searchQuery,
+    elementFilter,
+    roleFilter,
+    weaponTypeFilter,
+    rarityFilter,
+    sortBy,
+    sortDirection,
+  ]);
 
   const topBottleneckChar = useMemo(() => {
     return (
@@ -369,64 +491,186 @@ export function OverviewTab({
                   : "Public Character Showcase"}
               </h2>
               <span className="text-xs font-mono text-[#99907c] px-2 py-0.5 bg-[#262a35] rounded border border-white/10 tabular-nums">
-                {filteredCharacters.length === sortedCharacters.length
-                  ? `${sortedCharacters.length} Units Loaded`
-                  : `${filteredCharacters.length} / ${sortedCharacters.length} Units`}
+                {filteredCharacters.length === profile.characters.length
+                  ? `${profile.characters.length} Units Loaded`
+                  : `${filteredCharacters.length} / ${profile.characters.length} Units`}
               </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-xs font-mono">
-              <span className="text-[#99907c]">Sort by:</span>
-              {(
-                [
-                  { id: "cv", label: "Crit Value" },
-                  { id: "constellation", label: "Constellation" },
-                  { id: "element", label: "Element" },
-                ] as { id: SortMode; label: string }[]
-              ).map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setSortMode(option.id)}
-                  className={`px-2.5 py-1 rounded border transition-colors cursor-pointer ${
-                    sortMode === option.id
-                      ? "bg-[#262a35] border-[#d4af37]/50 text-[#f2ca50] font-semibold"
-                      : "bg-[#1c1f2a] border-white/10 text-[#d0c5af] hover:text-[#dfe2f1]"
-                  }`}
-                >
-                  {option.label}
-                </button>
-              ))}
             </div>
           </div>
 
-          {sortedCharacters.length > 0 && (
-            <div className="glass-panel rounded-xl p-3 flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="w-3.5 h-3.5 text-[#99907c] absolute left-2.5 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Filter by character, weapon, or artifact set..."
-                  className="w-full bg-[#0a0e18]/80 border border-white/10 rounded-lg pl-8 pr-3 py-1.5 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
-                />
+          {profile.characters.length > 0 && (
+            <div className="glass-panel rounded-xl p-3.5 space-y-2.5">
+              {/* Top Controls Row: Search Input + Weapon Type + Rarity + Sort + Sort Direction + Reset */}
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Search Input */}
+                <div className="relative flex-1 min-w-[200px]">
+                  <Search className="w-4 h-4 text-[#99907c] absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search characters by name..."
+                    className="w-full bg-[#0a0e18]/80 border border-white/10 rounded-lg pl-8 pr-7 py-1.5 text-xs text-[#dfe2f1] placeholder:text-[#99907c]/70 focus:outline-none focus:border-[#d4af37]"
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-[#99907c] hover:text-[#dfe2f1] cursor-pointer"
+                      title="Clear search"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Weapon Type Filter */}
+                <div className="flex items-center">
+                  <select
+                    value={weaponTypeFilter}
+                    onChange={(e) => setWeaponTypeFilter(e.target.value as WeaponTypeFilter)}
+                    className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
+                    title="Filter by weapon type"
+                  >
+                    {WEAPON_TYPE_FILTERS.map((w) => (
+                      <option key={w.value} value={w.value}>
+                        {w.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Rarity Filter */}
+                <div className="flex items-center gap-1 bg-[#0a0e18]/70 p-0.5 rounded-lg border border-white/10">
+                  {(["All", 5, 4] as const).map((r) => {
+                    const active = rarityFilter === r;
+                    return (
+                      <button
+                        key={String(r)}
+                        type="button"
+                        onClick={() => setRarityFilter(r)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer ${
+                          active
+                            ? "bg-[#262a35] border border-[#d4af37]/50 text-[#f2ca50] font-bold"
+                            : "text-[#99907c] hover:text-[#dfe2f1]"
+                        }`}
+                      >
+                        {r === "All" ? "All Stars" : `${r}★`}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Sort Selector & Direction Toggle */}
+                <div className="flex items-center gap-1.5">
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="bg-[#0a0e18]/80 border border-white/15 rounded-lg px-2.5 py-1.5 text-xs font-mono text-[#dfe2f1] focus:outline-none focus:border-[#d4af37] cursor-pointer"
+                    title="Sort metric"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        Sort: {opt.label}
+                      </option>
+                    ))}
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSortDirection((prev) => (prev === "desc" ? "asc" : "desc"))
+                    }
+                    className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-mono transition-colors cursor-pointer ${
+                      sortDirection === "asc"
+                        ? "bg-[#262a35] border-[#d4af37] text-[#f2ca50] font-semibold"
+                        : "bg-[#0a0e18]/80 border-white/15 text-[#dfe2f1] hover:border-white/30"
+                    }`}
+                    title={
+                      sortBy === "name"
+                        ? sortDirection === "asc"
+                          ? "Order: Z to A (click for A to Z)"
+                          : "Order: A to Z (click for Z to A)"
+                        : sortDirection === "asc"
+                        ? "Order: Low to High (click for High to Low)"
+                        : "Order: High to Low (click for Low to High)"
+                    }
+                  >
+                    {sortDirection === "asc" ? (
+                      <ArrowUp className="w-3.5 h-3.5 text-[#f2ca50]" />
+                    ) : (
+                      <ArrowDown className="w-3.5 h-3.5 text-[#99907c]" />
+                    )}
+                    <span>
+                      {sortBy === "name"
+                        ? sortDirection === "asc"
+                          ? "Z → A"
+                          : "A → Z"
+                        : sortDirection === "asc"
+                        ? "Low → High"
+                        : "High → Low"}
+                    </span>
+                  </button>
+                </div>
+
+                {/* Reset Filters button */}
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    onClick={handleResetFilters}
+                    className="text-[11px] font-mono px-2.5 py-1 rounded bg-[#1c1f2a] border border-[#d4af37]/40 hover:border-[#d4af37] text-[#f2ca50] cursor-pointer transition-colors"
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
-              <div className="flex flex-wrap items-center gap-1">
-                {ELEMENT_FILTERS.map((el) => {
-                  const active = elementFilter === el;
+
+              {/* Bottom Controls Row: Element Filter Pills & Match Counter */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-white/10">
+                <div className="flex flex-wrap items-center gap-1">
+                  {ELEMENT_FILTERS.map((el) => {
+                    const active = elementFilter === el;
+                    return (
+                      <button
+                        key={el}
+                        type="button"
+                        onClick={() => setElementFilter(el)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                          active
+                            ? "bg-[#262a35] border-[#d4af37]/50 text-[#f2ca50] font-semibold"
+                            : "bg-[#0a0e18]/60 border-white/10 text-[#99907c] hover:text-[#dfe2f1]"
+                        }`}
+                      >
+                        {el}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-[11px] font-mono text-[#99907c] tabular-nums">
+                  Showing <strong className="text-[#dfe2f1]">{filteredCharacters.length}</strong> of {profile.characters.length} characters
+                </div>
+              </div>
+
+              {/* Role Filter Pills Row */}
+              <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-white/5">
+                <span className="text-[10px] font-mono text-[#99907c] uppercase tracking-wider mr-1">
+                  Role:
+                </span>
+                {ROLE_FILTERS.map((r) => {
+                  const active = roleFilter === r.value;
                   return (
                     <button
-                      key={el}
+                      key={r.value}
                       type="button"
-                      onClick={() => setElementFilter(el)}
-                      className={`px-2.5 py-1 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
+                      onClick={() => setRoleFilter(r.value)}
+                      className={`px-2.5 py-0.5 rounded text-[11px] font-mono border transition-colors cursor-pointer ${
                         active
-                          ? "bg-[#262a35] border-[#d4af37]/50 text-[#f2ca50] font-semibold"
+                          ? "bg-[#262a35] border-[#d4af37]/60 text-[#f2ca50] font-semibold shadow-[0_0_8px_rgba(212,175,55,0.25)]"
                           : "bg-[#0a0e18]/60 border-white/10 text-[#99907c] hover:text-[#dfe2f1]"
                       }`}
                     >
-                      {el}
+                      {r.label}
                     </button>
                   );
                 })}
@@ -434,7 +678,7 @@ export function OverviewTab({
             </div>
           )}
 
-          {sortedCharacters.length === 0 ? (
+          {profile.characters.length === 0 ? (
             <div className="glass-panel rounded-xl p-8 text-center text-sm text-[#d0c5af]">
               No character builds are loaded for this profile yet. Click{" "}
               <span className="text-[#f2ca50] font-semibold">
@@ -446,13 +690,10 @@ export function OverviewTab({
             </div>
           ) : filteredCharacters.length === 0 ? (
             <div className="glass-panel rounded-xl p-6 text-center text-xs text-[#d0c5af] space-y-2">
-              <p>No characters match your current search or element filter.</p>
+              <p>No characters match your current search and filter criteria.</p>
               <button
                 type="button"
-                onClick={() => {
-                  setSearchQuery("");
-                  setElementFilter("All");
-                }}
+                onClick={handleResetFilters}
                 className="px-3 py-1 rounded bg-[#262a35] border border-[#d4af37]/40 text-[#f2ca50] font-mono cursor-pointer"
               >
                 Clear Filters
@@ -670,6 +911,8 @@ function ShowcaseCard({
 }) {
   const theme = ELEMENT_THEMES[char.element];
   const primarySet = char.artifactSets[0];
+  const activeRole = char.activeRole ?? inferActiveCombatRole(char);
+  const roleBadgeClass = getRoleBadgeClass(activeRole);
 
   return (
     <button
@@ -692,8 +935,15 @@ function ShowcaseCard({
         />
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-1">
-            <ElementBadge element={char.element} compact />
-            <span className="text-[11px] font-mono font-bold text-[#f2ca50] bg-[#d4af37]/12 border border-[#d4af37]/40 px-1.5 rounded">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <ElementBadge element={char.element} compact />
+              <span
+                className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded uppercase tracking-wider ${roleBadgeClass}`}
+              >
+                {activeRole}
+              </span>
+            </div>
+            <span className="text-[11px] font-mono font-bold text-[#f2ca50] bg-[#d4af37]/12 border border-[#d4af37]/40 px-1.5 rounded shrink-0">
               C{char.constellation}
             </span>
           </div>

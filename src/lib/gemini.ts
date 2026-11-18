@@ -11,6 +11,7 @@ import type {
   CoachEngineMode,
   CoachStrategyResponse,
   CoachingFocus,
+  CombatRole,
   EncounterPreset,
   EquipmentCoachQueryResponse,
   ShowcaseCharacter,
@@ -368,6 +369,7 @@ const EQUIPMENT_JSON_SCHEMA = {
 
 export async function askCoachEquipment(params: {
   character: ShowcaseCharacter;
+  role?: CombatRole;
   archetypeId?: string;
   artifactSetName?: string;
   question?: string;
@@ -379,7 +381,7 @@ export async function askCoachEquipment(params: {
   }
 
   try {
-    const guide = getEquipmentGuide(params.character);
+    const guide = getEquipmentGuide(params.character, params.role);
     const archetype =
       guide.archetypes.find((a) => a.id === params.archetypeId) ??
       guide.archetypes[0];
@@ -394,6 +396,7 @@ export async function askCoachEquipment(params: {
 
     const prompt = [
       `Analyze equipment recommendations for Genshin Impact character "${params.character.name}" (${params.character.element}, Lv.${params.character.level}, C${params.character.constellation}) based on Game8 (archive guides) and Icy-Veins theorycraft standards.`,
+      `Target Combat Role: ${params.role ?? archetype.role ?? "General"}`,
       `Target Build Archetype: ${archetype.name} - ${archetype.description}`,
       targetSetName ? `Target Artifact Set to optimize: 4pc ${targetSetName}` : "",
       "",
